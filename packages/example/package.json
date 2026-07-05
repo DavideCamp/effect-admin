@@ -1,0 +1,27 @@
+{
+  "name": "@effect-admin/example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Example host app: first consumer and test gym of effect-admin (blog + shop domain)",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "dev:pg": "DATABASE_URL=postgres://admin:admin@localhost:5434/admin tsx src/server.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down"
+  },
+  "dependencies": {
+    "@effect-admin/annotations": "workspace:*",
+    "@effect-admin/core": "workspace:*",
+    "@effect-admin/sql": "workspace:*",
+    "@effect-admin/web": "workspace:*",
+    "@effect/platform": "^0.96.2",
+    "@effect/platform-node": "^0.107.0",
+    "@effect/sql": "^0.51.1",
+    "@effect/sql-pg": "^0.52.1",
+    "effect": "^3.21.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.0"
+  }
+}

@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>effect-admin</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --surface: #ffffff;
+    --border: #e2e5ea;
+    --text: #1c2333;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-hover: #4338ca;
+    --header-bg: #1e2433;
+    --header-text: #e8eaf0;
+    --sidebar-w: 15rem;
+    --danger: #b91c1c;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+  }
+
+  /* ---- header ------------------------------------------------------- */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--header-bg);
+    color: var(--header-text);
+    padding: 0 1.25rem;
+    height: 3.25rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .brand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: .02em;
+  }
+  .brand small { font-weight: 400; opacity: .55; margin-left: .5rem; }
+
+  /* ---- layout ------------------------------------------------------- */
+  .layout { display: flex; min-height: calc(100vh - 3.25rem); }
+  aside {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 1.25rem .75rem;
+  }
+  .side-label {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    padding: 0 .75rem .5rem;
+  }
+  #resource-nav { display: flex; flex-direction: column; gap: 2px; }
+  #resource-nav a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-decoration: none;
+    cursor: pointer;
+    padding: .5rem .75rem;
+    border-radius: 6px;
+    font-size: .92rem;
+    color: var(--text);
+    text-transform: capitalize;
+  }
+  #resource-nav a:hover { background: #eef0f4; }
+  #resource-nav a.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .ro-badge {
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 0 .3rem;
+    opacity: .6;
+  }
+
+  main { flex: 1; padding: 1.5rem 2rem; min-width: 0; }
+
+  .page-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+  .page-head h1 {
+    font-size: 1.25rem;
+    margin: 0;
+    text-transform: capitalize;
+  }
+  .crumbs { font-size: .82rem; color: var(--muted); margin-bottom: .5rem; }
+  .crumbs a { color: var(--accent); text-decoration: none; text-transform: capitalize; }
+  .crumbs a:hover { text-decoration: underline; }
+
+  /* ---- buttons ------------------------------------------------------ */
+  .btn {
+    font: inherit;
+    font-size: .88rem;
+    padding: .45rem .9rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { background: #f0f1f5; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn.ghost {
+    background: transparent;
+    border-color: rgba(255, 255, 255, .25);
+    color: var(--header-text);
+  }
+  .btn.ghost:hover { background: rgba(255, 255, 255, .08); }
+  .btn.small { padding: .25rem .6rem; font-size: .8rem; }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover:not(:disabled) { background: #fdf0f0; border-color: #ecc8c8; }
+
+  /* ---- toolbar (search + filters) ------------------------------------ */
+  #toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem .75rem;
+    align-items: end;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem .9rem;
+    margin-bottom: .9rem;
+  }
+  #toolbar .control { display: flex; flex-direction: column; gap: .2rem; }
+  #toolbar .control > span {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+  }
+  #toolbar input, #toolbar select {
+    font: inherit;
+    font-size: .85rem;
+    padding: .32rem .5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+  }
+  #toolbar input:focus, #toolbar select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+  #toolbar input[type=search] { min-width: 14rem; }
+  #toolbar .range { display: flex; gap: .3rem; }
+  #toolbar .range input { width: 6.5rem; }
+
+  /* ---- table -------------------------------------------------------- */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td {
+    padding: .6rem .9rem;
+    text-align: left;
+    font-size: .88rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td { max-width: 28rem; overflow: hidden; text-overflow: ellipsis; }
+  th {
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--muted);
+    background: #fafbfc;
+    user-select: none;
+  }
+  th.sortable { cursor: pointer; }
+  th.sortable:hover { color: var(--text); }
+  th .dir { color: var(--accent); margin-left: .25rem; }
+  tbody tr { cursor: pointer; } /* the row IS the link to the detail page */
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #f8f9fc; }
+  .actions { text-align: right; width: 1%; }
+  .empty {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: .9rem;
+  }
+
+  /* ---- pagination ----------------------------------------------------- */
+  #pagination {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .9rem;
+    font-size: .85rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  #pagination .spacer { flex: 1; }
+  #pagination select {
+    font: inherit;
+    font-size: .82rem;
+    padding: .25rem .4rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  /* ---- detail / form ------------------------------------------------ */
+  #detail-view { display: none; }
+  #form-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+  /* Full width: fields flow in a responsive grid, buttons span the row. */
+  #record-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1rem 1.5rem;
+    align-items: start;
+  }
+  #form-panel label, #form-panel .static-field {
+    display: block;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .static-field .value {
+    display: block;
+    margin-top: .25rem;
+    font-weight: 400;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    font-size: .82rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  #form-panel input[type=text], #form-panel input[type=number],
+  #form-panel input[type=datetime-local], #form-panel select,
+  #form-panel textarea {
+    width: 100%;
+    padding: .45rem .6rem;
+    margin-top: .25rem;
+    font: inherit;
+    font-size: .9rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+  }
+  #form-panel input:disabled, #form-panel select:disabled { background: #f4f5f7; color: var(--muted); }
+  #form-panel input:focus, #form-panel select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: var(--accent);
+  }
+  #form-panel input[type=checkbox] {
+    display: block;
+    margin-top: .4rem;
+    width: 1.05rem;
+    height: 1.05rem;
+    accent-color: var(--accent);
+  }
+  #form-panel .buttons { grid-column: 1 / -1; margin-top: .25rem; display: flex; gap: .5rem; }
+  .hint { font-weight: 400; color: var(--muted); font-size: .75rem; margin-left: .3rem; }
+  .error {
+    margin-top: .9rem;
+    padding: .6rem .75rem;
+    background: #fdf0f0;
+    border: 1px solid #ecc8c8;
+    border-radius: 6px;
+    color: var(--danger);
+    white-space: pre-wrap;
+    font-family: ui-monospace, monospace;
+    font-size: .78rem;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">effect-admin <small id="mount-path"></small></div>
+  <!-- Visual only: the login/logout flow ships with auth in roadmap F3. -->
+  <button id="auth-btn" class="btn ghost" title="Autenticazione in arrivo (F3)">Login</button>
+</header>
+<div class="layout">
+  <aside>
+    <div class="side-label">Risorse</div>
+    <nav id="resource-nav"></nav>
+  </aside>
+  <main>
+    <div id="list-view">
+      <div class="page-head">
+        <h1 id="resource-title"></h1>
+        <button id="new-btn" class="btn primary">+ Nuovo</button>
+      </div>
+      <form id="toolbar"></form>
+      <div id="table-container"></div>
+      <div id="pagination"></div>
+    </div>
+    <div id="detail-view">
+      <div class="crumbs"><a id="back-link" href="#"></a> / <span id="crumb-leaf"></span></div>
+      <div class="page-head">
+        <h1 id="detail-title"></h1>
+        <button id="delete-btn" class="btn danger" style="display:none">Elimina</button>
+      </div>
+      <div id="form-panel">
+        <form id="record-form"></form>
+        <div class="error" id="form-error"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const BASE = "%ADMIN_BASE%";
+const API = BASE + "/api";
+const PAGE_SIZES = [10, 25, 50, 100];
+let schema = null;
+
+const el = (id) => document.getElementById(id);
+
+el("mount-path").textContent = BASE;
+
+// --- routing ----------------------------------------------------------------
+// Django-admin-style URLs, resolved on the client (the server returns this
+// page for every GET {base}/* so deep links and reloads work). The WHOLE
+// list state — page, sort, filters, search — lives in the query string:
+// bookmarkable, shareable, back-button friendly.
+//   {base}/products?page=2&orderBy=price&orderDir=desc&f_status=available
+//   {base}/products/new
+//   {base}/products/4/edit
+
+function parseRoute() {
+  const parts = location.pathname.slice(BASE.length).split("/").filter(Boolean);
+  if (parts.length === 1) return { view: "list", resource: parts[0] };
+  if (parts.length === 2 && parts[1] === "new") return { view: "form", resource: parts[0], id: null };
+  if (parts.length === 3 && parts[2] === "edit") return { view: "form", resource: parts[0], id: parts[1] };
+  return { view: "list", resource: parts[0] ?? null };
+}
+
+function navigate(path) {
+  history.pushState(null, "", BASE + path);
+  render();
+}
+window.addEventListener("popstate", render);
+
+function currentResource(name) {
+  return schema.resources.find((r) => r.name === name) ?? schema.resources[0];
+}
+
+async function render() {
+  const route = parseRoute();
+  const r = currentResource(route.resource);
+  renderNav(r);
+  const isForm = route.view === "form";
+  el("list-view").style.display = isForm ? "none" : "block";
+  el("detail-view").style.display = isForm ? "block" : "none";
+  if (isForm) await renderDetail(r, route.id);
+  else await renderList(r);
+}
+
+function renderNav(current) {
+  const nav = el("resource-nav");
+  nav.innerHTML = "";
+  for (const r of schema.resources) {
+    const a = document.createElement("a");
+    a.textContent = r.name;
+    a.href = `${BASE}/${r.name}`;
+    if (r.readOnly) {
+      const badge = document.createElement("span");
+      badge.className = "ro-badge";
+      badge.textContent = "sola lettura";
+      a.appendChild(badge);
+    }
+    if (r === current) a.classList.add("active");
+    a.onclick = (e) => { e.preventDefault(); navigate(`/${r.name}`); };
+    nav.appendChild(a);
+  }
+}
+
+// --- list page ----------------------------------------------------------------
+
+const fieldOf = (r, name) => r.fields.find((f) => f.name === name);
+
+function listParams() {
+  return new URLSearchParams(location.search);
+}
+
+/** Change some params and navigate; anything but page resets page. */
+function applyParams(r, mutate) {
+  const params = listParams();
+  mutate(params);
+  // clean empty params so URLs stay readable
+  for (const [k, v] of [...params.entries()]) {
+    if (v === "") params.delete(k);
+  }
+  const qs = params.toString();
+  navigate(`/${r.name}${qs ? "?" + qs : ""}`);
+}
+
+async function renderList(r) {
+  el("resource-title").textContent = r.name;
+  const newBtn = el("new-btn");
+  newBtn.style.display = r.readOnly ? "none" : "inline-block";
+  newBtn.onclick = () => navigate(`/${r.name}/new`);
+
+  const params = listParams();
+  renderToolbar(r, params);
+
+  const res = await fetch(`${API}/${r.name}?${params}`);
+  if (!res.ok) {
+    el("table-container").innerHTML = "";
+    el("pagination").textContent = `Errore ${res.status} nel caricamento della lista.`;
+    return;
+  }
+  const { rows, total } = await res.json();
+  renderTable(r, rows, params);
+  renderPagination(r, params, total);
+}
+
+function renderToolbar(r, params) {
+  const bar = el("toolbar");
+  bar.innerHTML = "";
+  bar.onsubmit = (e) => e.preventDefault();
+
+  const control = (labelText, input) => {
+    const wrap = document.createElement("label");
+    wrap.className = "control";
+    const span = document.createElement("span");
+    span.textContent = labelText;
+    wrap.append(span, input);
+    return wrap;
+  };
+
+  // search across text fields
+  const hasText = r.fields.some((f) => f.kind === "text");
+  if (hasText) {
+    const search = document.createElement("input");
+    search.type = "search";
+    search.placeholder = "Cerca…";
+    search.value = params.get("search") ?? "";
+    let timer;
+    search.oninput = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        applyParams(r, (p) => { p.set("search", search.value.trim()); p.delete("page"); });
+      }, 350);
+    };
+    bar.appendChild(control("Ricerca", search));
+  }
+
+  for (const f of r.fields) {
+    if (f.auto && f.kind !== "date" && f.kind !== "number") continue;
+    if (f.kind === "select") {
+      const select = document.createElement("select");
+      const all = document.createElement("option");
+      all.value = "";
+      all.textContent = "tutti";
+      select.appendChild(all);
+      for (const opt of f.options ?? []) {
+        const o = document.createElement("option");
+        o.value = String(opt);
+        o.textContent = String(opt);
+        select.appendChild(o);
+      }
+      select.value = params.get(`f_${f.name}`) ?? "";
+      select.onchange = () =>
+        applyParams(r, (p) => { p.set(`f_${f.name}`, select.value); p.delete("page"); });
+      bar.appendChild(control(f.title, select));
+    } else if (f.kind === "checkbox") {
+      const select = document.createElement("select");
+      for (const [v, label] of [["", "tutti"], ["true", "sì"], ["false", "no"]]) {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = label;
+        select.appendChild(o);
+      }
+      select.value = params.get(`f_${f.name}`) ?? "";
+      select.onchange = () =>
+        applyParams(r, (p) => { p.set(`f_${f.name}`, select.value); p.delete("page"); });
+      bar.appendChild(control(f.title, select));
+    } else if (f.kind === "number" || f.kind === "date") {
+      const range = document.createElement("div");
+      range.className = "range";
+      for (const bound of ["min", "max"]) {
+        const input = document.createElement("input");
+        input.type = f.kind === "number" ? "number" : "date";
+        if (f.kind === "number") input.step = "any";
+        input.placeholder = bound;
+        input.value = params.get(`f_${f.name}_${bound}`) ?? "";
+        input.onchange = () =>
+          applyParams(r, (p) => { p.set(`f_${f.name}_${bound}`, input.value); p.delete("page"); });
+        range.appendChild(input);
+      }
+      bar.appendChild(control(f.title, range));
+    }
+  }
+
+  // reset, only when something is active
+  const active = [...params.keys()].some((k) => k === "search" || k.startsWith("f_"));
+  if (active) {
+    const reset = document.createElement("button");
+    reset.type = "button";
+    reset.className = "btn small";
+    reset.textContent = "Azzera filtri";
+    reset.onclick = () => navigate(`/${r.name}`);
+    bar.appendChild(reset);
+  }
+}
+
+function cell(value, field) {
+  if (value === undefined || value === null) return "";
+  if (field) {
+    if (field.kind === "checkbox") return value ? "✓" : "✗";
+    if (field.kind === "date") return new Date(value).toLocaleString();
+    if (field.kind === "unsupported" && typeof value === "object") return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function renderTable(r, rows, params) {
+  const container = el("table-container");
+  container.innerHTML = "";
+  const card = document.createElement("div");
+  card.className = "table-card";
+  container.appendChild(card);
+
+  if (rows.length === 0) {
+    const filtered = [...params.keys()].some((k) => k === "search" || k.startsWith("f_"));
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = filtered
+      ? "Nessun risultato con questi filtri."
+      : r.readOnly
+        ? "Nessun record."
+        : "Nessun record. Crea il primo con “+ Nuovo”.";
+    card.appendChild(empty);
+    return;
+  }
+
+  const cols = r.listColumns;
+  const orderBy = params.get("orderBy");
+  const orderDir = params.get("orderDir") === "desc" ? "desc" : "asc";
+
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (const c of cols) {
+    const f = fieldOf(r, c);
+    const th = document.createElement("th");
+    th.textContent = f ? f.title : c;
+    if (f && f.kind !== "unsupported") {
+      th.className = "sortable";
+      if (orderBy === c) {
+        const dir = document.createElement("span");
+        dir.className = "dir";
+        dir.textContent = orderDir === "desc" ? "▼" : "▲";
+        th.appendChild(dir);
+      }
+      th.onclick = () =>
+        applyParams(r, (p) => {
+          const nextDir = orderBy === c && orderDir === "asc" ? "desc" : "asc";
+          p.set("orderBy", c);
+          p.set("orderDir", nextDir);
+          p.delete("page");
+        });
+    }
+    headRow.appendChild(th);
+  }
+  headRow.appendChild(document.createElement("th"));
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    // The whole row navigates to the change page, like Django admin.
+    tr.onclick = () => navigate(`/${r.name}/${row[r.primaryKey]}/edit`);
+    for (const c of cols) {
+      const td = document.createElement("td");
+      td.textContent = cell(row[c], fieldOf(r, c));
+      tr.appendChild(td);
+    }
+    const td = document.createElement("td");
+    td.className = "actions";
+    if (!r.readOnly) {
+      const del = document.createElement("button");
+      del.textContent = "Elimina";
+      del.className = "btn small danger";
+      del.onclick = (e) => { e.stopPropagation(); removeRow(r, row, () => render()); };
+      td.append(del);
+    }
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  card.appendChild(table);
+}
+
+function renderPagination(r, params, total) {
+  const box = el("pagination");
+  box.innerHTML = "";
+  const pageSize = Math.min(200, Math.max(1, Number(params.get("pageSize") ?? 25)));
+  const page = Math.max(1, Number(params.get("page") ?? 1));
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+
+  const prev = document.createElement("button");
+  prev.className = "btn small";
+  prev.textContent = "‹ Prec";
+  prev.disabled = page <= 1;
+  prev.onclick = () => applyParams(r, (p) => p.set("page", String(page - 1)));
+
+  const next = document.createElement("button");
+  next.className = "btn small";
+  next.textContent = "Succ ›";
+  next.disabled = page >= pages;
+  next.onclick = () => applyParams(r, (p) => p.set("page", String(page + 1)));
+
+  const info = document.createElement("span");
+  info.textContent = `Pagina ${page} di ${pages} — ${total.toLocaleString("it-IT")} risultati`;
+
+  const spacer = document.createElement("span");
+  spacer.className = "spacer";
+
+  const sizeLabel = document.createElement("span");
+  sizeLabel.textContent = "per pagina:";
+  const size = document.createElement("select");
+  for (const s of PAGE_SIZES) {
+    const o = document.createElement("option");
+    o.value = String(s);
+    o.textContent = String(s);
+    size.appendChild(o);
+  }
+  size.value = String(PAGE_SIZES.includes(pageSize) ? pageSize : 25);
+  size.onchange = () =>
+    applyParams(r, (p) => { p.set("pageSize", size.value); p.delete("page"); });
+
+  box.append(prev, info, next, spacer, sizeLabel, size);
+}
+
+// --- detail page (create / change / read-only view) --------------------------
+
+// Auto fields (id, created_at) are in the table but NEVER in the form.
+function formFields(r) {
+  return r.fields.filter((f) => !f.auto && f.kind !== "unsupported");
+}
+
+// Shown read-only in the change page: what the form cannot edit.
+function staticFields(r, row) {
+  return r.fields.filter((f) => f.auto || f.kind === "unsupported");
+}
+
+function toInputValue(field, value) {
+  if (value === undefined || value === null) return "";
+  if (field.kind === "date") {
+    // ISO string → value accepted by <input type=datetime-local>
+    const d = new Date(value);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  return String(value);
+}
+
+async function renderDetail(r, id) {
+  hideError();
+  const back = el("back-link");
+  back.textContent = r.name;
+  back.href = `${BASE}/${r.name}`;
+  back.onclick = (e) => { e.preventDefault(); navigate(`/${r.name}`); };
+
+  let row = null;
+  if (id !== null) {
+    const res = await fetch(`${API}/${r.name}/${id}`);
+    if (!res.ok) {
+      el("crumb-leaf").textContent = `#${id}`;
+      el("detail-title").textContent = `${r.name} #${id}`;
+      el("delete-btn").style.display = "none";
+      el("record-form").innerHTML = "";
+      showError(`Record non trovato (HTTP ${res.status}).`);
+      return;
+    }
+    row = await res.json();
+  }
+
+  el("crumb-leaf").textContent = row ? `#${row[r.primaryKey]}` : "nuovo";
+  el("detail-title").textContent = r.readOnly
+    ? `${r.name} #${row?.[r.primaryKey]}`
+    : row
+      ? `Modifica ${r.name} #${row[r.primaryKey]}`
+      : `Nuovo ${r.name}`;
+  const deleteBtn = el("delete-btn");
+  deleteBtn.style.display = row && !r.readOnly ? "inline-block" : "none";
+  if (row && !r.readOnly) {
+    deleteBtn.onclick = () => removeRow(r, row, () => navigate(`/${r.name}`));
+  }
+
+  buildForm(r, row);
+}
+
+function buildForm(r, row) {
+  const form = el("record-form");
+  form.innerHTML = "";
+
+  // read-only context: id, auto timestamps, unsupported columns (jsonb...)
+  if (row) {
+    for (const f of staticFields(r, row)) {
+      const wrap = document.createElement("div");
+      wrap.className = "static-field";
+      wrap.textContent = f.title;
+      const value = document.createElement("span");
+      value.className = "value";
+      value.textContent = cell(row[f.name], f) || "—";
+      wrap.appendChild(value);
+      form.appendChild(wrap);
+    }
+  }
+
+  for (const f of formFields(r)) {
+    const label = document.createElement("label");
+    label.textContent = f.title + (f.optional || f.nullable || r.readOnly ? "" : " *");
+    if (f.nullable && !r.readOnly) {
+      const hint = document.createElement("span");
+      hint.className = "hint";
+      hint.textContent = "(vuoto = null)";
+      label.appendChild(hint);
+    }
+    let input;
+    if (f.kind === "select") {
+      input = document.createElement("select");
+      if (f.nullable || (!row && f.optional)) {
+        const none = document.createElement("option");
+        none.value = "";
+        none.textContent = "—";
+        input.appendChild(none);
+      }
+      for (const opt of f.options ?? []) {
+        const o = document.createElement("option");
+        // JSON round-trip keeps the original type (string vs number)
+        o.value = JSON.stringify(opt);
+        o.textContent = String(opt);
+        input.appendChild(o);
+      }
+      if (row) input.value = row[f.name] === null ? "" : JSON.stringify(row[f.name]);
+    } else {
+      input = document.createElement("input");
+      input.type = { text: "text", number: "number", checkbox: "checkbox", date: "datetime-local" }[f.kind] ?? "text";
+      if (f.kind === "number") input.step = "any";
+      if (row) {
+        if (f.kind === "checkbox") input.checked = Boolean(row[f.name]);
+        else input.value = toInputValue(f, row[f.name]);
+      }
+    }
+    input.name = f.name;
+    input.dataset.kind = f.kind;
+    input.dataset.nullable = String(f.nullable);
+    input.disabled = r.readOnly;
+    label.appendChild(input);
+    form.appendChild(label);
+  }
+
+  const buttons = document.createElement("div");
+  buttons.className = "buttons";
+  if (!r.readOnly) {
+    const save = document.createElement("button");
+    save.type = "submit";
+    save.textContent = "Salva";
+    save.className = "btn primary";
+    buttons.appendChild(save);
+  }
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = r.readOnly ? "Torna all'elenco" : "Annulla";
+  cancel.className = "btn";
+  cancel.onclick = () => navigate(`/${r.name}`);
+  buttons.appendChild(cancel);
+  form.appendChild(buttons);
+  form.onsubmit = r.readOnly ? (e) => e.preventDefault() : (event) => submitForm(event, r, row);
+}
+
+/**
+ * Empty input semantics: a NULLABLE field sends null (the column admits
+ * NULL and the create schema requires the key), a merely optional one is
+ * omitted. Checkboxes are always explicit true/false.
+ */
+function readInput(input) {
+  const kind = input.dataset.kind;
+  const nullable = input.dataset.nullable === "true";
+  const emptyValue = nullable ? null : undefined;
+  if (kind === "checkbox") return input.checked;
+  if (input.value === "") return emptyValue;
+  if (kind === "number") return Number(input.value);
+  if (kind === "select") return JSON.parse(input.value);
+  if (kind === "date") return new Date(input.value).toISOString();
+  return input.value;
+}
+
+async function submitForm(event, r, editing) {
+  event.preventDefault();
+  hideError();
+  const inputs = [...el("record-form").elements].filter((i) => i.name);
+
+  let method, url, payload;
+  if (editing) {
+    // PATCH: only the fields that actually changed (partial update)
+    payload = {};
+    for (const input of inputs) {
+      const next = readInput(input);
+      const prev = editing[input.name];
+      const norm = (v) =>
+        input.dataset.kind === "date" && v !== null && v !== undefined
+          ? new Date(v).toISOString()
+          : v ?? null;
+      if (norm(next) !== norm(prev) && next !== undefined) payload[input.name] = next;
+    }
+    if (Object.keys(payload).length === 0) return navigate(`/${r.name}`);
+    method = "PATCH";
+    url = `${API}/${r.name}/${editing[r.primaryKey]}`;
+  } else {
+    payload = {};
+    for (const input of inputs) {
+      const value = readInput(input);
+      if (value !== undefined) payload[input.name] = value;
+    }
+    method = "POST";
+    url = `${API}/${r.name}`;
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    showError(body.message ?? JSON.stringify(body, null, 2));
+    return;
+  }
+  navigate(`/${r.name}`);
+}
+
+async function removeRow(r, row, after) {
+  if (!confirm(`Eliminare ${r.name} #${row[r.primaryKey]}?`)) return;
+  const res = await fetch(`${API}/${r.name}/${row[r.primaryKey]}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 204) {
+    const body = await res.json().catch(() => ({}));
+    alert(body.message ?? `Errore ${res.status}`);
+  }
+  await after();
+}
+
+function showError(message) {
+  const box = el("form-error");
+  box.textContent = message;
+  box.style.display = "block";
+}
+function hideError() {
+  el("form-error").style.display = "none";
+}
+
+fetch(`${API}/_schema`)
+  .then((res) => res.json())
+  .then((s) => { schema = s; return render(); });
+</script>
+</body>
+</html>

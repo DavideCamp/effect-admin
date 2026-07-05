@@ -1,0 +1,36 @@
+{
+  "name": "@effect-admin/core",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "effect-admin core: AST introspection, schema variant derivation, resource definitions, repo contract",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@effect-admin/annotations": "workspace:*"
+  },
+  "peerDependencies": {
+    "effect": "^3.21.4"
+  },
+  "devDependencies": {
+    "effect": "^3.21.4"
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  }
+}

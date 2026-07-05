@@ -1,0 +1,27 @@
+{
+  "name": "@effect-admin/annotations",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Zero-dependency annotation entrypoint: the only coupling a host app needs to effect-admin",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.build.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  }
+}
