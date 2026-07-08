@@ -8,23 +8,6 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    # Empty Postgres for @effect-admin/sql integration tests (they create
-    # and drop their own scratch table; the suite skips if the DB is absent,
-    # so here we make sure it never skips).
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: admin
-          POSTGRES_PASSWORD: admin
-          POSTGRES_DB: admin
-        ports:
-          - 5434:5432
-        options: >-
-          --health-cmd "pg_isready -U admin -d admin"
-          --health-interval 2s
-          --health-timeout 2s
-          --health-retries 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -35,5 +18,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
-        env:
-          ADMIN_TEST_DATABASE_URL: postgres://admin:admin@localhost:5434/admin
+      - run: pnpm build

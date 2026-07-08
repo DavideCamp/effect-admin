@@ -1,4 +1,5 @@
-import { Option, SchemaAST as AST } from "effect"
+import * as Option from "effect/Option"
+import * as AST from "effect/SchemaAST"
 import { AdminField, type AdminFieldAnnotation } from "@effect-admin/annotations"
 import type { FieldKind, FieldMeta } from "./types.js"
 
@@ -81,6 +82,13 @@ interface Kind {
 
 const UNSUPPORTED: Kind = { kind: "unsupported", nullable: false }
 
+const arrayElement = (ast: AST.AST): AST.AST | undefined => {
+  const inner = unwrapRefinements(ast)
+  return AST.isTupleType(inner) && inner.elements.length === 0 && inner.rest.length === 1
+    ? inner.rest[0]?.type
+    : undefined
+}
+
 const kindOf = (ast: AST.AST): Kind => {
   switch (ast._tag) {
     case "StringKeyword":
@@ -119,22 +127,25 @@ const kindOf = (ast: AST.AST): Kind => {
       return isDate(ast) ? { kind: "date", nullable: false } : UNSUPPORTED
     case "Declaration":
       return isDate(ast) ? { kind: "date", nullable: false } : UNSUPPORTED
+    case "TupleType": {
+      const element = arrayElement(ast)
+      return element ? kindOf(element) : UNSUPPORTED
+    }
     default:
       return UNSUPPORTED
   }
 }
 
 /**
- * Resolve a resource schema's AST to the TypeLiteral that carries the
- * ENCODED property keys (= column names = JSON wire keys).
+ * Resolve a resource schema's AST to its decoded TypeLiteral. The React
+ * client receives decoded HttpApi values, so `fromKey("full_name")` is
+ * represented here as `fullName`.
  *
  * A plain `Schema.Struct` IS a TypeLiteral. A struct with `fromKey`
  * property signatures (mina #1) becomes a Transformation whose
- * `transformation` is a TypeLiteralTransformation: the key renames live
- * there, and the `from` side is the TypeLiteral with encoded keys and the
- * COMPLETE per-field ASTs (including per-field transformations like
- * `Schema.Date`, with their annotations). That is exactly the side the
- * admin needs — see the FieldMeta identity note in types.ts.
+ * `transformation` is a TypeLiteralTransformation. Its `to` side carries
+ * decoded keys and complete per-field ASTs, which is exactly what the React
+ * client consumes.
  */
 export const resolveStruct = (ast: AST.AST): AST.TypeLiteral => {
   if (AST.isTypeLiteral(ast)) return ast
@@ -142,7 +153,7 @@ export const resolveStruct = (ast: AST.AST): AST.TypeLiteral => {
     AST.isTransformation(ast) &&
     ast.transformation._tag === "TypeLiteralTransformation"
   ) {
-    return resolveStruct(ast.from)
+    return resolveStruct(ast.to)
   }
   throw new Error(
     `effect-admin: resource schemas must be a Schema.Struct (TypeLiteral), got "${ast._tag}". ` +
@@ -152,8 +163,7 @@ export const resolveStruct = (ast: AST.AST): AST.TypeLiteral => {
 
 /**
  * Walk a resource schema's AST and produce the field metadata that drives
- * everything downstream: schema variant derivation, the /_schema endpoint,
- * the generated UI, the SQL adapter's column whitelist.
+ * the generated React UI and startup validation.
  */
 export const introspect = (ast: AST.AST): ReadonlyArray<FieldMeta> => {
   const struct = resolveStruct(ast)
@@ -178,7 +188,21 @@ export const introspect = (ast: AST.AST): ReadonlyArray<FieldMeta> => {
       optional: sig.isOptional,
       auto: admin.auto ?? false,
       nullable,
-      ...(options !== undefined ? { options } : {})
+      ...(options !== undefined ? { options } : {}),
+      ...(admin.ref !== undefined
+        ? {
+            relation: {
+              resource: admin.ref,
+              multiple: arrayElement(sig.type) !== undefined,
+              ...(admin.displayField !== undefined
+                ? { displayField: admin.displayField }
+                : {})
+            }
+          }
+        : {}),
+      hidden: admin.hidden ?? false,
+      readOnly: admin.readOnly ?? false,
+      sensitive: admin.sensitive ?? false
     }
   })
 }

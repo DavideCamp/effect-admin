@@ -2,11 +2,12 @@
   "name": "@effect-admin/core",
   "version": "0.1.0",
   "type": "module",
-  "description": "effect-admin core: AST introspection, schema variant derivation, resource definitions, repo contract",
+  "description": "Schema introspection and HttpApi resource definitions for effect-admin",
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
     }
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "effect": "^3.21.4"
   },
   "devDependencies": {
+    "@effect/platform": "^0.96.2",
     "effect": "^3.21.4"
   },
   "license": "MIT",
@@ -23,9 +25,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.build.json"
+    "build": "rm -rf dist && tsc -b tsconfig.build.json --force",
+    "prepack": "pnpm build"
   },
   "publishConfig": {
+    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",

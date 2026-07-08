@@ -1,7 +1,8 @@
-# Dominio d'esempio (blog + shop)
+# Example domain models
 
-Progettato come **infrastruttura di test** (roadmap F0): ogni forma AST che
-la libreria dichiara di supportare deve comparire in almeno uno schema.
+These schemas exercise the AST forms supported by the React field metadata
+layer. The frontend uses decoded names (`fullName`); `fromKey("full_name")`
+remains an API encoding concern.
 
 | Forma AST                         | Dove                                      |
 | --------------------------------- | ----------------------------------------- |
@@ -15,9 +16,8 @@ la libreria dichiara di supportare deve comparire in almeno uno schema.
 | JSON                              | `Order.metadata`                          |
 | FK                                | `Post.authorId`, `Comment.postId`, …      |
 | self-FK                           | `Comment.parentId`                        |
-| M2M                               | `Post ↔ Tag` (tabella ponte `post_tags`, DDL in F1, widget in F4) |
-| risorsa read-only (D5)            | `Order` (flag `readOnly` arriva in F1)    |
+| M2M                               | `Post.tagIds` → `Tag`                     |
 
-In F0 solo `Tag` e `Product` sono registrati nell'admin: sono gli unici il
-cui AST regge l'introspettore del PoC. Gli altri schemi sono il bersaglio
-di F1 (mine #1/#2 di `plan.md`) — vedi `test/f1-debt.test.ts`.
+The runnable V1 example registers users, posts, and tags. The remaining models
+are compact fixtures for expanding widgets without coupling the library to
+database persistence.

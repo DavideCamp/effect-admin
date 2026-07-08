@@ -3,25 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Example host app: first consumer and test gym of effect-admin (blog + shop domain)",
+  "description": "Vite + Effect HttpApi example for effect-admin",
   "scripts": {
-    "dev": "tsx src/server.ts",
-    "dev:pg": "DATABASE_URL=postgres://admin:admin@localhost:5434/admin tsx src/server.ts",
-    "db:up": "docker compose up -d --wait",
-    "db:down": "docker compose down"
+    "predev": "pnpm --filter @effect-admin/react^... build && pnpm --filter @effect-admin/react build",
+    "dev": "concurrently -k -n api,web 'pnpm dev:server' 'pnpm dev:web'",
+    "dev:server": "tsx src/server.ts",
+    "dev:web": "vite",
+    "build": "vite build"
   },
   "dependencies": {
     "@effect-admin/annotations": "workspace:*",
+    "@effect-admin/contracts": "workspace:*",
     "@effect-admin/core": "workspace:*",
-    "@effect-admin/sql": "workspace:*",
-    "@effect-admin/web": "workspace:*",
+    "@effect-admin/react": "workspace:*",
     "@effect/platform": "^0.96.2",
     "@effect/platform-node": "^0.107.0",
-    "@effect/sql": "^0.51.1",
-    "@effect/sql-pg": "^0.52.1",
-    "effect": "^3.21.4"
+    "effect": "^3.21.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "tsx": "^4.23.0"
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "concurrently": "^9.2.0",
+    "tsx": "^4.23.0",
+    "vite": "^7.0.0"
   }
 }

@@ -1,0 +1,61 @@
+{
+  "name": "@effect-admin/react",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Plug-and-play React admin for Effect Schema and HttpApi",
+  "sideEffects": [
+    "./dist/styles.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./styles.css": {
+      "development": "./src/styles.css",
+      "default": "./dist/styles.css"
+    }
+  },
+  "dependencies": {
+    "@effect-admin/contracts": "workspace:*",
+    "@effect-admin/core": "workspace:*",
+    "@radix-ui/react-dialog": "^1.1.15"
+  },
+  "peerDependencies": {
+    "@effect/platform": "^0.96.2",
+    "effect": "^3.21.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@effect/platform": "^0.96.2",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "effect": "^3.21.4",
+    "jsdom": "^29.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "vitest-axe": "^0.1.0"
+  },
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -b tsconfig.build.json --force && cp src/styles.css dist/styles.css",
+    "prepack": "pnpm build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./styles.css": "./dist/styles.css"
+    }
+  }
+}

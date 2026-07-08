@@ -6,7 +6,8 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "development": "./src/index.ts",
+      "default": "./dist/index.js"
     }
   },
   "license": "MIT",
@@ -14,9 +15,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.build.json"
+    "build": "rm -rf dist && tsc -b tsconfig.build.json --force",
+    "prepack": "pnpm build"
   },
   "publishConfig": {
+    "access": "public",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",

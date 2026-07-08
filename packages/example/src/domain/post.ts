@@ -1,5 +1,5 @@
 import { AdminField } from "@effect-admin/annotations"
-import { Schema } from "effect"
+import * as Schema from "effect/Schema"
 
 export const Post = Schema.Struct({
   id: Schema.Int.annotations({
@@ -17,6 +17,10 @@ export const Post = Schema.Struct({
   body: Schema.String.annotations({ title: "Testo" }),
   status: Schema.Literal("draft", "published", "archived").annotations({
     title: "Stato"
+  }),
+  tagIds: Schema.Array(Schema.Int).annotations({
+    title: "Tag",
+    [AdminField]: { ref: "tags", displayField: "name" }
   }),
   publishedAt: Schema.propertySignature(
     Schema.NullOr(Schema.Date).annotations({ title: "Pubblicato il" })

@@ -1,5 +1,5 @@
 import { AdminField } from "@effect-admin/annotations"
-import { Schema } from "effect"
+import * as Schema from "effect/Schema"
 
 export const User = Schema.Struct({
   id: Schema.Int.annotations({

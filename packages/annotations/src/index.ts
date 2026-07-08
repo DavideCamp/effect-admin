@@ -21,4 +21,10 @@ export interface AdminFieldAnnotation {
   readonly ref?: string
   /** Which field of the referenced resource to show as label (roadmap F4). */
   readonly displayField?: string
+  /** Never render this field in generated admin screens. */
+  readonly hidden?: boolean
+  /** Show the value, but never include it in generated create/update forms. */
+  readonly readOnly?: boolean
+  /** Mask the value in detail and list screens. */
+  readonly sensitive?: boolean
 }

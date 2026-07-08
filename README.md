@@ -1,120 +1,220 @@
 # effect-admin
 
-**L'equivalente del Django admin per l'ecosistema Effect, come libreria.**
-Un'app `@effect/platform` con modelli in `effect/Schema` monta un router
-admin e ottiene un pannello di amministrazione derivato interamente dai
-suoi schemi. Nessuna duplicazione: lo schema dell'app è l'unica fonte di
-verità.
+**A plug-and-play React admin derived from Effect models and `HttpApi`.**
 
-> Stato: **Fase 2 completata** — Postgres reale (`@effect-admin/sql`),
-> introspezione completa (fromKey, NullOr, refinement, branded; ciò che
-> non si mappa degrada a read-only), risorse read-only, lista con
-> paginazione/sort/filtri/ricerca e stato nella query string. Prossima:
-> F3 (auth + permessi — **blocca qualunque deploy pubblico**). Vedi
-> `docs/plan.md` (decisioni D1–D10) e `docs/roadmap.md`.
+Register a model with an `HttpApiGroup`, mount `<EffectAdmin />`, and get a
+clean resource UI: list, search, filters, sorting, pagination, detail, create,
+update, delete, relations, typed errors, custom actions, and capability-aware
+controls.
 
-## Struttura
+The host application owns persistence, business rules, authentication, and
+authorization. effect-admin calls the same typed API as any other client; it
+does not write directly to your database or create an identity system.
 
-| Package                    | Cosa contiene                                             |
-| -------------------------- | --------------------------------------------------------- |
-| `@effect-admin/annotations`| Il symbol `AdminField` + tipi. Zero dipendenze: è l'unico accoppiamento che l'app ospite prende (D3). |
-| `@effect-admin/core`       | Introspezione AST → `FieldMeta`, derivazione varianti CRUD, `defineResource`, contratto `AdminRepo` (+ repo in-memory). |
-| `@effect-admin/sql`        | Adapter Postgres (`AdminRepoSqlLive`) sul `SqlClient` generico di `@effect/sql`. |
-| `@effect-admin/web`        | Il router montabile: API JSON + UI generata dai metadati (D2/D8). |
-| `@effect-admin/example`    | L'app ospite d'esempio (dominio blog+shop) — primo consumatore e palestra della libreria. |
+## Status
 
-## Quickstart: installarlo in un altro progetto
+V1 vertical slice. The API is not published or semver-stable yet.
 
-> ⚠️ **Niente autenticazione fino alla F3**: chiunque raggiunga `/admin`
-> può leggere e scrivere. Solo localhost / reti fidate.
+## Packages
 
-I package non sono (ancora) su npm: si installano come **tarball locali**.
-Da questo repo:
+| Package | Purpose |
+| --- | --- |
+| `@effect-admin/annotations` | Minimal schema annotation symbol |
+| `@effect-admin/contracts` | Standard list and typed error contracts |
+| `@effect-admin/core` | Decoded Schema AST → field metadata and resources |
+| `@effect-admin/react` | React application, default components and CSS |
+| `@effect-admin/example` | Runnable Vite frontend + host-owned `HttpApi` server |
+| `@effect-admin/next-example` | Build fixture for Next.js App Router consumption |
 
-```bash
-pnpm run pack:all        # builda e produce artifacts/*.tgz
-```
+## The V1 contract
 
-Nel progetto ospite (un'app `@effect/platform` qualunque):
+Each registered `HttpApiGroup` may expose conventional endpoints named:
 
-```bash
-pnpm add ../effect-admin/artifacts/effect-admin-core-0.1.0.tgz \
-         ../effect-admin/artifacts/effect-admin-web-0.1.0.tgz
-# per Postgres, anche:
-pnpm add ../effect-admin/artifacts/effect-admin-sql-0.1.0.tgz @effect/sql @effect/sql-pg
-```
+- `list` — accepts `AdminListParams`, returns `{ rows, total }`
+- `get` — accepts `{ path: { id } }`, returns one model
+- `create` — accepts `{ payload }`, returns the created model
+- `update` — accepts `{ path: { id }, payload }`, returns the model
+- `delete` — accepts `{ path: { id } }`
 
-Le dipendenze **interne** dei tarball (`@effect-admin/core` → `annotations`,
-`web` → `core`) puntano a versioni che non esistono sul registry: vanno
-reindirizzate ai tarball con gli override pnpm nel `package.json` ospite:
+Missing endpoints remove that operation from the UI. Nonstandard endpoint
+names can be mapped explicitly.
 
-```jsonc
-"pnpm": {
-  "overrides": {
-    "@effect-admin/annotations": "file:../effect-admin/artifacts/effect-admin-annotations-0.1.0.tgz",
-    "@effect-admin/core": "file:../effect-admin/artifacts/effect-admin-core-0.1.0.tgz"
+```ts
+import { defineAdminResource } from "@effect-admin/core"
+
+export const users = defineAdminResource({
+  model: User,
+  apiGroup: UsersApi,
+  list: { columns: ["id", "email", "fullName", "role"] },
+  operations: {
+    // Optional escape hatch:
+    // create: "store"
   }
+})
+
+export const resources = [users]
+```
+
+Field identity is the **decoded model key**. A field declared with
+`Schema.fromKey("full_name")` is `fullName` in admin configuration because
+that is what the decoded `HttpApiClient` returns.
+
+## React setup
+
+```tsx
+import { EffectAdmin } from "@effect-admin/react"
+import "@effect-admin/react/styles.css"
+import { AppApi } from "./contracts"
+import { resources } from "./admin"
+
+export function AdminApp() {
+  return (
+    <EffectAdmin
+      api={AppApi}
+      resources={resources}
+      basePath="/admin"
+    />
+  )
 }
 ```
 
-Poi l'admin si **monta** (non appare da solo — come `admin.site.urls` in
-Django). App minima completa, JavaScript puro, `node server.js`:
+`EffectAdmin` creates a fetch-based typed client. Applications with custom
+headers, middleware requirements, or runtime wiring can pass `client` instead.
 
-```js
-import { AdminField, defineResource, InMemoryRepoLive } from "@effect-admin/core"
-import { makeAdminRouter } from "@effect-admin/web"
-import { HttpLayerRouter } from "@effect/platform"
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import { Layer, Schema } from "effect"
-import { createServer } from "node:http"
+### Next.js
 
-const Todo = Schema.Struct({
-  id: Schema.Int.annotations({ title: "ID", [AdminField]: { auto: true } }),
-  title: Schema.String.annotations({ title: "Titolo" }),
-  done: Schema.Boolean.annotations({ title: "Fatto" })
+Mount it in a catch-all Client Component so deep links survive refreshes:
+
+```tsx
+// app/admin/[[...path]]/page.tsx
+"use client"
+
+import { EffectAdmin } from "@effect-admin/react"
+import "@effect-admin/react/styles.css"
+
+export default function AdminPage() {
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+}
+```
+
+The small internal router owns URLs below `basePath`; it has no dependency on
+Next Router, React Router, or TanStack Router.
+
+## Component overrides
+
+Every slot has a default. Override only the pieces your application owns:
+
+```tsx
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  components={{
+    Layout: MyLayout,
+    TextInput: MyTextInput,
+    DataTable: MyDataTable
+  }}
+/>
+```
+
+The default theme uses Radix primitives where behavior matters and plain CSS
+variables for visual customization. React and React DOM are peer dependencies.
+
+## Model annotations
+
+Effect Schema and `@effect/sql` `Model.Class` provide field shapes but do not
+encode foreign-key lookup semantics. Keep relationship metadata minimal:
+
+```ts
+authorId: Schema.Int.annotations({
+  title: "Author",
+  [AdminField]: { ref: "users", displayField: "email" }
 })
-
-const todos = defineResource({ name: "todos", schema: Todo, primaryKey: "id" })
-const AdminRoutes = makeAdminRouter({ resources: [todos], basePath: "/admin" })
-
-const HttpLive = HttpLayerRouter.serve(AdminRoutes).pipe(
-  Layer.provide(InMemoryRepoLive), // ← lo storage lo scegli tu
-  Layer.provide(NodeHttpServer.layer(createServer, { port: 3000 }))
-)
-NodeRuntime.runMain(Layer.launch(HttpLive))
 ```
 
-Con Postgres al posto dell'in-memory (le tabelle devono già esistere:
-l'admin non genera DDL, il DB è dell'app ospite — D5):
+Supported annotation flags are `auto`, `ref`, `displayField`, `hidden`,
+`readOnly`, and `sensitive`. Presentation-only choices belong in the resource:
 
-```js
-import { AdminRepoSqlLive } from "@effect-admin/sql"
-import { PgClient } from "@effect/sql-pg"
-import { Redacted } from "effect"
-
-const RepoLive = AdminRepoSqlLive.pipe(
-  Layer.provide(PgClient.layer({ url: Redacted.make(process.env.DATABASE_URL) })),
-  Layer.orDie
-)
-// … Layer.provide(RepoLive) al posto di InMemoryRepoLive
+```ts
+defineAdminResource({
+  model: Post,
+  apiGroup: PostsApi,
+  fields: {
+    body: { widget: "textarea" },
+    internalNote: { hidden: true }
+  }
+})
 ```
 
-## Sviluppo
+An array of annotated IDs becomes a minimal multiple-relation control:
+
+```ts
+tagIds: Schema.Array(Schema.Int).annotations({
+  [AdminField]: { ref: "tags", displayField: "name" }
+})
+```
+
+## Custom actions
+
+Register a record endpoint and effect-admin derives its payload form from the
+endpoint payload Schema. Payload-free actions can run directly; either kind can
+request confirmation.
+
+```ts
+defineAdminResource({
+  model: User,
+  apiGroup: UsersApi,
+  actions: {
+    suspend: {
+      endpoint: "suspend",
+      label: "Suspend",
+      confirm: "Suspend this user?"
+    }
+  }
+})
+```
+
+## Capabilities
+
+The backend must enforce authorization. A capability map only keeps the UI
+from offering controls the current user cannot use:
+
+```tsx
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  capabilities={{
+    users: {
+      create: false,
+      delete: false,
+      actions: { suspend: true }
+    }
+  }}
+/>
+```
+
+## Typed validation
+
+Endpoints may return `AdminValidationError`. The default form places its
+`fields` messages beside the matching controls. Other failures receive a safe
+generic state.
+
+## Run the example
 
 ```bash
 pnpm install
-pnpm typecheck
-pnpm test                # i test SQL richiedono il Postgres qui sotto (altrimenti skippano)
-
-# con Postgres (seed di volume: 50k comments, 20k orders, 5k posts...)
-cd packages/example && docker compose up -d --wait && cd ../..
-PORT=3001 pnpm dev:pg    # admin su http://localhost:3001/admin
-
-# senza DB (in-memory, seed minimo)
-PORT=3001 pnpm dev
+pnpm dev
+# http://localhost:3000/admin
 ```
 
-Nota d'architettura: i nomi campo dell'admin sono le **chiavi encoded**
-degli schemi (`fromKey("full_name")` → `full_name`): è insieme il nome
-colonna SQL e la chiave JSON sul wire. I nomi decodificati (`fullName`)
-appartengono al codice tipato dell'app ospite, che l'admin non vede mai.
+Verification:
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+The example registers users, posts, and tags. It exercises typed action
+payloads and both single and multiple relation fields. The production Vite
+build currently emits about 147 kB gzip for the initial JS entry; creation of
+the default `HttpApiClient` is a separate lazy chunk of about 18 kB gzip.

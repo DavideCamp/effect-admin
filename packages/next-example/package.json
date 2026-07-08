@@ -1,0 +1,24 @@
+{
+  "name": "@effect-admin/next-example",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build"
+  },
+  "dependencies": {
+    "@effect-admin/contracts": "workspace:*",
+    "@effect-admin/core": "workspace:*",
+    "@effect-admin/react": "workspace:*",
+    "@effect/platform": "^0.96.2",
+    "effect": "^3.21.4",
+    "next": "^16.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "typescript": "^6.0.3"
+  }
+}

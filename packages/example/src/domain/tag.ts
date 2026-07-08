@@ -1,11 +1,7 @@
 import { AdminField } from "@effect-admin/annotations"
-import { Schema } from "effect"
+import * as Schema from "effect/Schema"
 
-/**
- * Deliberately flat — single-word column names, no fromKey — so it is
- * registerable already in F0 with the PoC introspector. The M2M with Post
- * goes through the `post_tags` bridge table (DDL in F1, widget in F4).
- */
+/** Kept deliberately flat; Post references tags through its typed `tagIds`. */
 export const Tag = Schema.Struct({
   id: Schema.Int.annotations({
     title: "ID",

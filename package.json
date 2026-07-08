@@ -9,12 +9,13 @@
     "dev": "pnpm --filter @effect-admin/example dev",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dev:pg": "pnpm --filter @effect-admin/example dev:pg",
-    "build": "pnpm -r --filter './packages/*' --filter '!@effect-admin/example' run build",
-    "pack:all": "pnpm build && rm -rf artifacts && mkdir -p artifacts && pnpm -r --filter './packages/*' --filter '!@effect-admin/example' exec pnpm pack --pack-destination ../../artifacts"
+    "build": "pnpm -r --filter './packages/*' run build",
+    "pack:all": "pnpm build && rm -rf artifacts && mkdir -p artifacts && pnpm --filter @effect-admin/annotations --filter @effect-admin/contracts --filter @effect-admin/core --filter @effect-admin/react exec pnpm pack --pack-destination ../../artifacts"
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
     "tsx": "^4.23.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"

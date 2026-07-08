@@ -3,5 +3,7 @@ dist/
 *.log
 .DS_Store
 dist/
+.next/
 artifacts/
 *.tgz
+*.tsbuildinfo

@@ -8,7 +8,7 @@
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": "src",
-    "tsBuildInfoFile": "dist/.tsbuildinfo"
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src"],
   "references": [{ "path": "../annotations/tsconfig.build.json" }]
