@@ -2,10 +2,10 @@
 
 **A plug-and-play React admin derived from Effect models and `HttpApi`.**
 
-Register a model with an `HttpApiGroup`, mount `<EffectAdmin />`, and get a
-clean resource UI: list, search, filters, sorting, pagination, detail, create,
-update, delete, relations, typed errors, custom actions, and capability-aware
-controls.
+Register a model, generate or provide an `HttpApiGroup`, mount
+`<EffectAdmin />`, and get a clean resource UI: list, search, filters,
+sorting, pagination, detail, create, update, delete, relations, typed errors,
+custom actions, and capability-aware controls.
 
 The host application owns persistence, business rules, authentication, and
 authorization. effect-admin calls the same typed API as any other client; it
@@ -20,7 +20,7 @@ V1 vertical slice. The API is not published or semver-stable yet.
 | Package | Purpose |
 | --- | --- |
 | `@effect-admin/annotations` | Minimal schema annotation symbol |
-| `@effect-admin/contracts` | Standard list and typed error contracts |
+| `@effect-admin/contracts` | Standard list, typed errors, and CRUD `HttpApi` helpers |
 | `@effect-admin/core` | Decoded Schema AST → field metadata and resources |
 | `@effect-admin/react` | React application, default components and CSS |
 | `@effect-admin/example` | Runnable Vite frontend + host-owned `HttpApi` server |
@@ -38,6 +38,30 @@ Each registered `HttpApiGroup` may expose conventional endpoints named:
 
 Missing endpoints remove that operation from the UI. Nonstandard endpoint
 names can be mapped explicitly.
+
+For the common case, generate the CRUD group and resource from the model:
+
+```ts
+import { defineCrudResource, makeAdminApi } from "@effect-admin/core"
+
+export const users = defineCrudResource({
+  name: "users",
+  model: User,
+  list: { columns: ["id", "email", "fullName", "role"] }
+})
+
+export const resources = [users] as const
+export const AppApi = makeAdminApi("app", resources, { prefix: "/api" })
+```
+
+`defineCrudResource` derives `create` from the model by omitting fields marked
+`auto`, `readOnly`, `hidden`, or `sensitive`; `update` is `partial(create)`.
+Pass explicit `create` / `update` schemas only when the write shape differs
+from that convention or you want the backend handler payload to be statically
+exact.
+
+For resources that already have a hand-written `HttpApiGroup`, or whose
+endpoint names do not match the convention, use the lower-level registration:
 
 ```ts
 import { defineAdminResource } from "@effect-admin/core"
@@ -64,8 +88,7 @@ that is what the decoded `HttpApiClient` returns.
 ```tsx
 import { EffectAdmin } from "@effect-admin/react"
 import "@effect-admin/react/styles.css"
-import { AppApi } from "./contracts"
-import { resources } from "./admin"
+import { AppApi, resources } from "./admin"
 
 export function AdminApp() {
   return (
@@ -169,6 +192,19 @@ defineAdminResource({
       label: "Suspend",
       confirm: "Suspend this user?"
     }
+  }
+})
+```
+
+With generated CRUD, extend the generated group for custom business operations:
+
+```ts
+defineCrudResource({
+  name: "users",
+  model: User,
+  extendApiGroup: (apiGroup) => apiGroup.add(SuspendUserEndpoint),
+  actions: {
+    suspend: { endpoint: "suspend", label: "Suspend" }
   }
 })
 ```

@@ -3,7 +3,13 @@ import { HttpApiEndpoint, HttpApiGroup } from "@effect/platform"
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 import { introspect } from "../src/introspect.js"
-import { defineAdminResource } from "../src/resource.js"
+import {
+  defineAdminResource,
+  defineCrudResource,
+  deriveAdminCreateSchema,
+  deriveAdminUpdateSchema,
+  makeAdminApi
+} from "../src/resource.js"
 
 describe("introspect", () => {
   it("derives decoded frontend field names and widget metadata", () => {
@@ -134,5 +140,61 @@ describe("defineAdminResource", () => {
     expect(resource.actions.suspend?.fields).toMatchObject([
       { name: "reason", title: "Reason", kind: "text" }
     ])
+  })
+
+  it("can define a resource and conventional CRUD group from the model", () => {
+    const people = defineCrudResource({
+      name: "people",
+      model: Model
+    })
+    const AppApi = makeAdminApi("app", [people], { prefix: "/api" })
+
+    expect(people.operations).toEqual({
+      list: "list",
+      get: "get",
+      create: "create",
+      update: "update",
+      delete: "delete"
+    })
+    expect(Object.keys(AppApi.groups)).toEqual(["people"])
+  })
+
+  it("derives admin create and update payload schemas from the model", async () => {
+    const User = Schema.Struct({
+      id: Schema.Int.annotations({ [AdminField]: { auto: true } }),
+      fullName: Schema.propertySignature(Schema.String).pipe(Schema.fromKey("full_name")),
+      email: Schema.String,
+      secret: Schema.String.annotations({ [AdminField]: { sensitive: true } }),
+      createdAt: Schema.propertySignature(
+        Schema.Date.annotations({ [AdminField]: { auto: true } })
+      ).pipe(Schema.fromKey("created_at"))
+    })
+
+    const create = deriveAdminCreateSchema(User)
+    await expect(Schema.decodeUnknownPromise(create)({
+      full_name: "Ada Lovelace",
+      email: "ada@example.com"
+    })).resolves.toEqual({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com"
+    })
+
+    await expect(Schema.decodeUnknownPromise(create)({
+      id: 1,
+      full_name: "Ada Lovelace",
+      email: "ada@example.com",
+      secret: "hidden",
+      created_at: "2026-01-01T00:00:00.000Z"
+    })).resolves.toEqual({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com"
+    })
+
+    const update = deriveAdminUpdateSchema(create)
+    await expect(Schema.decodeUnknownPromise(update)({
+      email: "ada@example.com"
+    })).resolves.toEqual({
+      email: "ada@example.com"
+    })
   })
 })

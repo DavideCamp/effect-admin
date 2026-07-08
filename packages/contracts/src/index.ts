@@ -1,3 +1,7 @@
+import * as HttpApi from "@effect/platform/HttpApi"
+import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
+import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
+import * as HttpApiSchema from "@effect/platform/HttpApiSchema"
 import * as Schema from "effect/Schema"
 
 /** A filter format every v1 list endpoint understands. */
@@ -54,3 +58,77 @@ export interface ResourceCapabilities {
 }
 
 export type AdminCapabilities = Readonly<Record<string, ResourceCapabilities>>
+
+export interface AdminCrudApiConfig<
+  Name extends string,
+  Model extends Schema.Schema.AnyNoContext,
+  Create extends Schema.Schema.AnyNoContext = Model,
+  Update extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext
+> {
+  readonly name: Name
+  readonly model: Model
+  readonly path?: `/${string}`
+  readonly idParam?: string
+  readonly idPath?: Schema.Schema.AnyNoContext
+  /**
+   * Payload used by the generated `create` endpoint.
+   *
+   * Defaults to the model schema.
+   */
+  readonly create?: Create
+  /**
+   * Payload used by the generated `update` endpoint.
+   *
+   * Defaults to `Schema.partial(create ?? model)`.
+   */
+  readonly update?: Update
+}
+
+const defaultIdPath = Schema.Struct({ id: Schema.NumberFromString })
+
+/**
+ * Build a conventional CRUD `HttpApiGroup` from an Effect model schema.
+ *
+ * The generated endpoints are:
+ * - `list`: `GET /<name>`
+ * - `get`: `GET /<name>/:id`
+ * - `create`: `POST /<name>`
+ * - `update`: `PATCH /<name>/:id`
+ * - `delete`: `DELETE /<name>/:id`
+ */
+export const makeCrudApiGroup = <
+  const Name extends string,
+  Model extends Schema.Schema.AnyNoContext,
+  Create extends Schema.Schema.AnyNoContext = Model,
+  Update extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext
+>(config: AdminCrudApiConfig<Name, Model, Create, Update>) => {
+  const path = config.path ?? `/${config.name}`
+  const idParam = config.idParam ?? "id"
+  const idPath = config.idPath ?? defaultIdPath
+  const create = config.create ?? (config.model as unknown as Create)
+  const update = config.update ?? Schema.partial(create as Schema.Schema.AnyNoContext)
+
+  return HttpApiGroup.make(config.name)
+    .addError(AdminNotFound, { status: 404 })
+    .addError(AdminValidationError, { status: 400 })
+    .add(HttpApiEndpoint.get("list", path).setUrlParams(AdminListParams).addSuccess(AdminListResult(config.model)))
+    .add(HttpApiEndpoint.get("get", `${path}/:${idParam}`).setPath(idPath).addSuccess(config.model))
+    .add(HttpApiEndpoint.post("create", path).setPayload(create).addSuccess(config.model, { status: 201 }))
+    .add(HttpApiEndpoint.patch("update", `${path}/:${idParam}`).setPath(idPath).setPayload(update).addSuccess(config.model))
+    .add(HttpApiEndpoint.del("delete", `${path}/:${idParam}`).setPath(idPath).addSuccess(HttpApiSchema.NoContent))
+}
+
+export const makeAdminApi = <
+  const Id extends string,
+  const Groups extends ReadonlyArray<HttpApiGroup.HttpApiGroup.Any>
+>(
+  identifier: Id,
+  groups: Groups,
+  options?: { readonly prefix?: `/${string}` }
+): HttpApi.HttpApi<Id, Groups[number], any, never> => {
+  let api = HttpApi.make(identifier) as unknown as HttpApi.HttpApi.AnyWithProps
+  for (const group of groups) {
+    api = api.add(group) as unknown as HttpApi.HttpApi.AnyWithProps
+  }
+  return (options?.prefix ? api.prefix(options.prefix) : api) as unknown as HttpApi.HttpApi<Id, Groups[number], any, never>
+}

@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { AdminListParams, AdminValidationError } from "../src/index.js"
+import { AdminListParams, AdminValidationError, makeAdminApi, makeCrudApiGroup } from "../src/index.js"
 
 describe("admin HttpApi contracts", () => {
   it("decodes query strings into the standard list request", async () => {
@@ -23,5 +23,26 @@ describe("admin HttpApi contracts", () => {
     })
     expect(error._tag).toBe("AdminValidationError")
     expect(error.fields?.email).toEqual(["Already registered"])
+  })
+
+  it("generates conventional CRUD endpoint groups from a model", () => {
+    const User = Schema.Struct({ id: Schema.Int, email: Schema.String })
+    const UserCreate = Schema.Struct({ email: Schema.String })
+    const UsersApi = makeCrudApiGroup({
+      name: "users",
+      model: User,
+      create: UserCreate
+    })
+
+    expect(UsersApi.identifier).toBe("users")
+    expect(Object.keys(UsersApi.endpoints)).toEqual(["list", "get", "create", "update", "delete"])
+  })
+
+  it("combines generated groups into an HttpApi", () => {
+    const User = Schema.Struct({ id: Schema.Int, email: Schema.String })
+    const UsersApi = makeCrudApiGroup({ name: "users", model: User })
+    const AppApi = makeAdminApi("app", [UsersApi], { prefix: "/api" })
+
+    expect(Object.keys(AppApi.groups)).toEqual(["users"])
   })
 })
