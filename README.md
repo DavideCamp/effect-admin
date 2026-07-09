@@ -443,6 +443,38 @@ pnpm version-packages
 pnpm release
 ```
 
+First public feedback release:
+
+```bash
+pnpm pack:all
+pnpm release:alpha
+```
+
+`release:alpha` publishes with the npm `alpha` dist-tag. Keep using that tag
+until the API has survived real usage in another Effect application. The
+packages are independent community packages; they are not official Effect
+packages unless the Effect maintainers explicitly adopt them.
+
+If npm returns `E403` with “Two-factor authentication ... is required”, publish
+with a fresh one-time password from your authenticator app:
+
+```bash
+pnpm build
+pnpm changeset publish --tag alpha --otp 123456
+```
+
+If your shell/package-manager wrapper still does not forward the OTP, pass it
+through npm's config environment variable instead:
+
+```bash
+pnpm build
+NPM_CONFIG_OTP=123456 pnpm changeset publish --tag alpha
+```
+
+For CI or automation, create a granular npm access token that can publish these
+packages and has “bypass 2FA” enabled, then expose it as `NPM_TOKEN` in the
+publishing environment.
+
 CI runs install, typecheck, tests, and build on pushes to `main` and pull
 requests.
 

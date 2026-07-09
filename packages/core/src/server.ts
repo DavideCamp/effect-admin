@@ -6,6 +6,33 @@ export interface AdminListResultValue<A> {
   readonly total: number
 }
 
+export interface AdminListRequest {
+  readonly urlParams: AdminListParams
+}
+
+export interface AdminGetRequest<Id = string | number> {
+  readonly path: {
+    readonly id: Id
+  }
+}
+
+export interface AdminCreateRequest<Create> {
+  readonly payload: Create
+}
+
+export interface AdminUpdateRequest<Update, Id = string | number> {
+  readonly path: {
+    readonly id: Id
+  }
+  readonly payload: Update
+}
+
+export interface AdminDeleteRequest<Id = string | number> {
+  readonly path: {
+    readonly id: Id
+  }
+}
+
 export interface AdminCrudRepository<
   Model,
   Create = Partial<Model>,
@@ -27,11 +54,21 @@ export interface AdminCrudHandlerMap<
   Update = Partial<Model>,
   Id = string | number
 > {
-  readonly list: (request: any) => Effect.Effect<AdminListResultValue<Model>, any, never>
-  readonly get: (request: any) => Effect.Effect<Model, any, never>
-  readonly create: (request: any) => Effect.Effect<Model, any, never>
-  readonly update: (request: any) => Effect.Effect<Model, any, never>
-  readonly delete: (request: any) => Effect.Effect<void, any, never>
+  readonly list: (
+    request: unknown
+  ) => Effect.Effect<AdminListResultValue<Model>, any, never>
+  readonly get: (
+    request: unknown
+  ) => Effect.Effect<Model, any, never>
+  readonly create: (
+    request: unknown
+  ) => Effect.Effect<Model, any, never>
+  readonly update: (
+    request: unknown
+  ) => Effect.Effect<Model, any, never>
+  readonly delete: (
+    request: unknown
+  ) => Effect.Effect<void, any, never>
 }
 
 /**
@@ -48,31 +85,24 @@ export const makeCrudHandlers = <
 >(
   repository: AdminCrudRepository<Model, Create, Update, Id>
 ): AdminCrudHandlerMap<Model, Create, Update, Id> => ({
-  list: ({ urlParams }) => repository.list(urlParams),
-  get: ({ path }) => repository.get(path.id),
-  create: ({ payload }) => repository.create(payload),
-  update: ({ path, payload }) => repository.update(path.id, payload),
-  delete: ({ path }) => repository.delete(path.id)
-})
-
-export const bindCrudHandlers = <
-  Handlers,
-  Model,
-  Create = Partial<Model>,
-  Update = Partial<Model>,
-  Id = string | number
->(
-  handlers: Handlers,
-  repository: AdminCrudRepository<Model, Create, Update, Id>
-): any => {
-  const crud = makeCrudHandlers(repository)
-  const builder = handlers as {
-    handle: (name: string, handler: unknown) => any
+  list: (request) => {
+    const { urlParams } = request as AdminListRequest
+    return repository.list(urlParams)
+  },
+  get: (request) => {
+    const { path } = request as AdminGetRequest<Id>
+    return repository.get(path.id)
+  },
+  create: (request) => {
+    const { payload } = request as AdminCreateRequest<Create>
+    return repository.create(payload)
+  },
+  update: (request) => {
+    const { path, payload } = request as AdminUpdateRequest<Update, Id>
+    return repository.update(path.id, payload)
+  },
+  delete: (request) => {
+    const { path } = request as AdminDeleteRequest<Id>
+    return repository.delete(path.id)
   }
-  return builder
-    .handle("list", crud.list)
-    .handle("get", crud.get)
-    .handle("create", crud.create)
-    .handle("update", crud.update)
-    .handle("delete", crud.delete) as Handlers
-}
+})

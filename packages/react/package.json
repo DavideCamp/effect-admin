@@ -2,7 +2,7 @@
   "name": "@effect-admin/react",
   "version": "0.1.0",
   "type": "module",
-  "description": "Plug-and-play React admin for Effect Schema and HttpApi",
+  "description": "Plug-and-play React admin generated from Effect Schema and HttpApi",
   "sideEffects": [
     "./dist/styles.css"
   ],
@@ -41,6 +41,15 @@
     "vitest-axe": "^0.1.0"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCamp/effect-admin.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/DavideCamp/effect-admin#readme",
+  "bugs": {
+    "url": "https://github.com/DavideCamp/effect-admin/issues"
+  },
   "files": [
     "dist"
   ],

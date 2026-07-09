@@ -17,10 +17,14 @@ export {
   type ConventionalOperation
 } from "./resource.js"
 export {
-  bindCrudHandlers,
   makeCrudHandlers,
+  type AdminCreateRequest,
   type AdminCrudHandlerMap,
   type AdminCrudRepository,
-  type AdminListResultValue
+  type AdminDeleteRequest,
+  type AdminGetRequest,
+  type AdminListRequest,
+  type AdminListResultValue,
+  type AdminUpdateRequest
 } from "./server.js"
 export { type FieldKind, type FieldMeta } from "./types.js"

@@ -19,7 +19,18 @@
     "effect": "^3.21.4"
   },
   "license": "MIT",
-  "files": ["dist"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCamp/effect-admin.git",
+    "directory": "packages/contracts"
+  },
+  "homepage": "https://github.com/DavideCamp/effect-admin#readme",
+  "bugs": {
+    "url": "https://github.com/DavideCamp/effect-admin/issues"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "rm -rf dist && tsc -b tsconfig.build.json --force",
     "prepack": "pnpm build"

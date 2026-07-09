@@ -13,6 +13,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
+    "publish:alpha": "changeset publish --tag alpha",
+    "release:alpha": "pnpm build && changeset publish --tag alpha",
     "pack:all": "pnpm build && rm -rf artifacts && mkdir -p artifacts && pnpm --filter @effect-admin/annotations --filter @effect-admin/contracts --filter @effect-admin/core --filter @effect-admin/react exec pnpm pack --pack-destination ../../artifacts"
   },
   "devDependencies": {

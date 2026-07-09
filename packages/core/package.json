@@ -2,7 +2,7 @@
   "name": "@effect-admin/core",
   "version": "0.1.0",
   "type": "module",
-  "description": "Schema introspection and HttpApi resource definitions for effect-admin",
+  "description": "Effect Schema introspection, CRUD conventions, and admin resource definitions",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -23,6 +23,15 @@
     "effect": "^3.21.4"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCamp/effect-admin.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/DavideCamp/effect-admin#readme",
+  "bugs": {
+    "url": "https://github.com/DavideCamp/effect-admin/issues"
+  },
   "files": [
     "dist"
   ],

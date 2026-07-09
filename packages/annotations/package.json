@@ -11,6 +11,15 @@
     }
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DavideCamp/effect-admin.git",
+    "directory": "packages/annotations"
+  },
+  "homepage": "https://github.com/DavideCamp/effect-admin#readme",
+  "bugs": {
+    "url": "https://github.com/DavideCamp/effect-admin/issues"
+  },
   "files": [
     "dist"
   ],
