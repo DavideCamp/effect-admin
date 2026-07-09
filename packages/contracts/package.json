@@ -1,6 +1,6 @@
 {
   "name": "@effect-admin/contracts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Opinionated HttpApi contracts shared by effect-admin clients and servers",
   "keywords": [
