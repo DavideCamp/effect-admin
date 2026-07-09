@@ -24,10 +24,10 @@ does not write directly to your database or create an identity system.
 
 ## Status
 
-`0.1.0` is published on npm as the first public feedback release:
+`0.1.1` is the current alpha package line:
 
 ```bash
-pnpm add @effect-admin/react@0.1.0
+pnpm add @effect-admin/react@0.1.1
 ```
 
 The API is still alpha and not semver-stable. Use it for internal admin and
@@ -73,14 +73,14 @@ frontend app.
 
 ```bash
 pnpm --filter @your-org/app-contract add \
-  @effect-admin/core@0.1.0 \
-  @effect-admin/contracts@0.1.0 \
-  @effect-admin/annotations@0.1.0 \
+  @effect-admin/core@0.1.1 \
+  @effect-admin/contracts@0.1.1 \
+  @effect-admin/annotations@0.1.1 \
   effect@^3.21.4 \
   @effect/platform@^0.96.2
 
 pnpm --filter @your-org/web add \
-  @effect-admin/react@0.1.0 \
+  @effect-admin/react@0.1.1 \
   effect@^3.21.4 \
   @effect/platform@^0.96.2 \
   react \
@@ -106,6 +106,9 @@ pnpm add @effect-admin/react@alpha
 
 The safer option for a real app is pinning an exact version until the public
 API settles.
+
+For a fuller setup with capabilities, custom clients, Vite, and Next.js, see
+[docs/integration-guide.md](docs/integration-guide.md).
 
 ## Quick start: Effect model to admin
 
@@ -489,9 +492,9 @@ until the API has survived real usage in another Effect application. The
 packages are independent community packages; they are not official Effect
 packages unless the Effect maintainers explicitly adopt them.
 
-Because `0.1.0` is the first published version, npm may also show it as
-`latest`. Future `0.1.x` releases should still be published with the `alpha`
-tag until the API is intentionally promoted.
+Because `0.1.0` was the first published version, npm may still show it as
+`latest` while newer `0.1.x` releases are published under the `alpha` tag.
+Keep using the `alpha` tag until the API is intentionally promoted.
 
 If npm returns `E403` with “Two-factor authentication ... is required”, publish
 with a fresh one-time password from your authenticator app:

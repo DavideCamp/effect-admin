@@ -3,7 +3,7 @@ import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
 import * as Dialog from "@radix-ui/react-dialog"
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
-import { runEndpoint, type AdminClient, type AdminListResult, type AdminRecord } from "./client.js"
+import { runEndpoint, type AdminClient, type AdminEndpoint, type AdminListResult, type AdminRecord } from "./client.js"
 import type { EffectAdminComponents, TextInputProps } from "./components.js"
 import {
   can,
@@ -434,7 +434,9 @@ export const RecordScreen = ({
   const runAction = (name: string, payload?: AdminRecord) => {
     if (id === undefined) return
     const action = resource.actions[name]
-    const method = action ? client[resource.groupName]?.[action.endpoint] : undefined
+    const method = action
+      ? client[resource.groupName]?.[action.endpoint] as AdminEndpoint | undefined
+      : undefined
     if (!action || !method) return
     setRunningAction(name)
     setFailure(undefined)

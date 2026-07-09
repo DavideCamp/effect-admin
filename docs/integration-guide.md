@@ -1,0 +1,296 @@
+# Integration guide
+
+This guide is the intended 0.1.x path for adding effect-admin to an existing
+Effect monorepo.
+
+The library works best when your application already has:
+
+- shared Effect Schema models;
+- Effect Platform `HttpApi` contracts;
+- a React or Next.js frontend that can import those contracts;
+- backend handlers that already own authentication, authorization, validation,
+  persistence, tenancy, and audit logging.
+
+effect-admin generates an admin surface from that seam. It does not become your
+database layer, auth framework, or permission system.
+
+## Install
+
+Install contract/core packages where your shared models and `HttpApi` contracts
+live:
+
+```bash
+pnpm --filter @your-org/app-contract add \
+  @effect-admin/core@0.1.1 \
+  @effect-admin/contracts@0.1.1 \
+  @effect-admin/annotations@0.1.1 \
+  effect@^3.21.4 \
+  @effect/platform@^0.96.2
+```
+
+Install the React package in the frontend application:
+
+```bash
+pnpm --filter @your-org/web add \
+  @effect-admin/react@0.1.1 \
+  effect@^3.21.4 \
+  @effect/platform@^0.96.2 \
+  react \
+  react-dom
+```
+
+Use exact package versions while the API is alpha. The `alpha` dist-tag is fine
+for experiments, but exact versions make real app upgrades easier to review.
+
+## Recommended monorepo shape
+
+```txt
+packages/app-contract/
+  src/admin.ts          # models, resources, AppApi
+
+apps/api/
+  src/server.ts         # HttpApiBuilder handlers, auth, repositories
+
+apps/web/
+  src/AdminApp.tsx      # EffectAdmin mount
+```
+
+The contract package is the important seam: both server and frontend can import
+it without importing server implementation code.
+
+## Define resources from models
+
+```ts
+// packages/app-contract/src/admin.ts
+import { AdminField } from "@effect-admin/annotations"
+import { defineCrudResource, makeAdminApi } from "@effect-admin/core"
+import * as Schema from "effect/Schema"
+
+export const User = Schema.Struct({
+  id: Schema.Int.annotations({
+    title: "ID",
+    [AdminField]: { auto: true, readOnly: true }
+  }),
+  email: Schema.String.annotations({ title: "Email" }),
+  fullName: Schema.String.annotations({ title: "Full name" }),
+  active: Schema.Boolean.annotations({ title: "Active" })
+})
+
+export const users = defineCrudResource({
+  name: "users",
+  model: User,
+  list: { columns: ["id", "email", "fullName", "active"] }
+})
+
+export const resources = [users] as const
+export const AppApi = makeAdminApi("app", resources, { prefix: "/api" })
+```
+
+`defineCrudResource` creates the conventional `HttpApiGroup` and derives create
+/ update payloads from the model. Fields marked `auto`, `readOnly`, `hidden`,
+or `sensitive` are omitted from the generated create payload.
+
+## Implement handlers in the host server
+
+```ts
+// apps/api/src/server.ts
+import { makeCrudHandlers } from "@effect-admin/core"
+import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
+import { AppApi } from "@your-org/app-contract/admin"
+
+const UsersCrud = makeCrudHandlers(UsersRepository)
+
+export const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) =>
+  handlers
+    .handle("list", UsersCrud.list)
+    .handle("get", UsersCrud.get)
+    .handle("create", UsersCrud.create)
+    .handle("update", UsersCrud.update)
+    .handle("delete", UsersCrud.delete)
+)
+```
+
+The repository is still yours. Put auth checks, tenant scoping, validation,
+transactions, audit logging, and business invariants there or in surrounding
+middleware/layers.
+
+## Mount in Vite or another React app
+
+```tsx
+// apps/web/src/AdminApp.tsx
+import { EffectAdmin } from "@effect-admin/react"
+import "@effect-admin/react/styles.css"
+import { AppApi, resources } from "@your-org/app-contract/admin"
+
+export function AdminApp() {
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+}
+```
+
+The internal router owns URLs below `basePath`, so the host app only needs to
+route `/admin/*` to the React component.
+
+## Mount in Next.js App Router
+
+Use a Client Component catch-all route:
+
+```tsx
+// app/admin/[[...path]]/page.tsx
+"use client"
+
+import { EffectAdmin } from "@effect-admin/react"
+import "@effect-admin/react/styles.css"
+import { AppApi, resources } from "@your-org/app-contract/admin"
+
+export default function AdminPage() {
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+}
+```
+
+If your Next.js app proxies API requests or injects session headers, pass a
+custom `client` instead of `api`.
+
+## Capabilities
+
+Capabilities are UI metadata only. They hide controls the current user should
+not see, but every backend handler must still enforce authorization.
+
+Serve capabilities from the current session:
+
+```ts
+import { AdminCapabilities } from "@effect-admin/contracts"
+import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
+import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
+
+export const AdminMetaApi = HttpApiGroup.make("admin")
+  .add(
+    HttpApiEndpoint.get("capabilities", "/admin/capabilities")
+      .addSuccess(AdminCapabilities)
+  )
+```
+
+Load and validate them in the frontend:
+
+```tsx
+import { AdminCapabilities } from "@effect-admin/contracts"
+import { EffectAdmin } from "@effect-admin/react"
+import * as Schema from "effect/Schema"
+
+const loadCapabilities = async () => {
+  const response = await fetch("/api/admin/capabilities")
+  if (!response.ok) throw new Error("Unable to load admin capabilities.")
+  return Schema.decodeUnknownPromise(AdminCapabilities)(await response.json())
+}
+
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  basePath="/admin"
+  loadCapabilities={loadCapabilities}
+/>
+```
+
+## Custom client for auth, cookies, tenant headers, or tracing
+
+`EffectAdmin` creates a default fetch-based `HttpApiClient` when you pass `api`.
+For production apps, a custom `client` is often the cleaner seam because the
+host may need CSRF headers, bearer tokens, tenant IDs, tracing, or a custom
+Effect runtime.
+
+The client is intentionally small: a resource map containing endpoint
+functions. Each endpoint returns an `Effect`.
+
+```tsx
+import type { AdminClient, AdminListResult, AdminRecord } from "@effect-admin/react"
+import * as Effect from "effect/Effect"
+
+type ListRequest = {
+  readonly urlParams: Readonly<Record<string, unknown>>
+}
+
+type PathRequest = {
+  readonly path: { readonly id: string | number }
+}
+
+type PayloadRequest = {
+  readonly payload: AdminRecord
+}
+
+type PathPayloadRequest = PathRequest & PayloadRequest
+
+const encodeQuery = (params: Readonly<Record<string, unknown>>) => {
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) continue
+    query.set(key, typeof value === "string" ? value : JSON.stringify(value))
+  }
+  return query
+}
+
+const requestJson = <A,>(url: string, init?: RequestInit) =>
+  Effect.tryPromise({
+    try: async () => {
+      const response = await fetch(url, {
+        ...init,
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          "x-tenant-id": "current-tenant",
+          ...init?.headers
+        }
+      })
+      if (!response.ok) throw response
+      return await response.json() as A
+    },
+    catch: (error) => error
+  })
+
+export const adminClient = {
+  users: {
+    list: ({ urlParams }: ListRequest) => {
+      const query = encodeQuery(urlParams)
+      return requestJson<AdminListResult>(`/api/users?${query}`)
+    },
+    get: ({ path }: PathRequest) =>
+      requestJson<AdminRecord>(`/api/users/${path.id}`),
+    create: ({ payload }: PayloadRequest) =>
+      requestJson<AdminRecord>("/api/users", {
+        method: "POST",
+        body: JSON.stringify(payload)
+      }),
+    update: ({ path, payload }: PathPayloadRequest) =>
+      requestJson<AdminRecord>(`/api/users/${path.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload)
+      }),
+    delete: ({ path }: PathRequest) =>
+      requestJson<void>(`/api/users/${path.id}`, { method: "DELETE" })
+  }
+} satisfies AdminClient
+
+<EffectAdmin resources={resources} client={adminClient} basePath="/admin" />
+```
+
+In an Effect-native app you can also build this client from
+`HttpApiClient.make` and provide your own `FetchHttpClient` layer or middleware.
+The important part is that the UI depends only on `AdminClient`.
+
+## Production checklist
+
+Before exposing the admin in production:
+
+- authenticate every admin request;
+- authorize every handler server-side;
+- scope list/get/update/delete by tenant/account when relevant;
+- return `AdminValidationError` for field-level validation;
+- serve capabilities from the session, not from hard-coded frontend state;
+- protect admin endpoints with the same CSRF/CORS/session policy as the rest of
+  the app;
+- mark generated, read-only, hidden, and sensitive fields with `AdminField`;
+- keep audit logging and business invariants in host code.
+
+## Current limitation
+
+The `0.1.x` line targets Effect 3 and `@effect/platform` `HttpApi`. Effect 4
+beta / `effect/unstable/httpapi` should be handled as an explicit adapter or
+future release.

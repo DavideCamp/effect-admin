@@ -11,10 +11,10 @@ export type AdminEndpoint<
   Request = unknown,
   Success = unknown,
   Error = unknown
-> = (request?: Request) => Effect.Effect<Success, Error, never>
+> = (request: Request) => Effect.Effect<Success, Error, never>
 
 export type AdminClient = Readonly<
-  Record<string, Readonly<Record<string, AdminEndpoint>>>
+  Record<string, Readonly<Record<string, AdminEndpoint<never>>>>
 >
 
 export const runEndpoint = <A, E>(effect: Effect.Effect<A, E, never>): Promise<A> =>

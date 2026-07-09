@@ -3,7 +3,7 @@
 The plug-and-play React UI for effect-admin.
 
 ```bash
-pnpm add @effect-admin/react@0.1.0 effect@^3.21.4 @effect/platform@^0.96.2 react react-dom
+pnpm add @effect-admin/react@0.1.1 effect@^3.21.4 @effect/platform@^0.96.2 react react-dom
 ```
 
 It is designed for Effect monorepos where the server and frontend can share the

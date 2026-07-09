@@ -4,7 +4,7 @@ Zero-dependency semantic field annotations for effect-admin. Host models only
 need this package to describe admin visibility and relation display metadata.
 
 ```bash
-pnpm add @effect-admin/annotations@0.1.0
+pnpm add @effect-admin/annotations@0.1.1
 ```
 
 The annotations are intentionally small. They do not create a second domain
