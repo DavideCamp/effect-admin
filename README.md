@@ -255,8 +255,24 @@ export function AdminApp() {
 ```
 
 `EffectAdmin` creates a fetch-based typed client from the `HttpApi`.
-Applications with custom headers, middleware requirements, session handling, or
-runtime wiring can pass `client` instead.
+Applications that only need request headers can keep the generated client and
+pass `clientOptions`:
+
+```tsx
+const clientOptions = useMemo(() => ({
+  headers: () => ({ "x-admin-role": currentRole })
+}), [currentRole])
+
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  basePath="/admin"
+  clientOptions={clientOptions}
+/>
+```
+
+For custom middleware, runtime wiring, or a different transport adapter, pass
+`client` instead.
 
 ### Next.js
 

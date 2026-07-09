@@ -11,7 +11,11 @@ describe("EffectAdmin", () => {
     const PeopleApi = HttpApiGroup.make("people").add(HttpApiEndpoint.get("list", "/people"))
     const people = defineAdminResource({ model: Person, apiGroup: PeopleApi })
     const html = renderToString(
-      <EffectAdmin resources={[people]} client={{ people: { list: () => { throw new Error("not run during render") } } }} />
+      <EffectAdmin
+        resources={[people]}
+        clientOptions={{ headers: { "x-admin-role": "staff" } }}
+        client={{ people: { list: () => { throw new Error("not run during render") } } }}
+      />
     )
     expect(html).toContain("Effect Admin")
     expect(html).toContain("People")

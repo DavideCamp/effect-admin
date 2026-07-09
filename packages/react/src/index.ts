@@ -14,3 +14,7 @@ export {
   type AdminListResult,
   type AdminRecord
 } from "./client.js"
+export type {
+  DefaultAdminClientOptions,
+  EffectAdminClientOptions
+} from "./default-client.js"

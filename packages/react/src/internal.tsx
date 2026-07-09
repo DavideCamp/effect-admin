@@ -37,6 +37,7 @@ export const failureOf = (error: unknown): Failure => {
       return { message, fields }
     }
     if (value._tag === "AdminNotFound") return { title: "Not found", message: "This record no longer exists." }
+    if (value._tag === "AdminForbidden") return { title: "Forbidden", message: message || "You do not have permission to perform this operation." }
     if (value._tag === "ResponseError") return { message: "The server rejected the request." }
     return { message }
   }

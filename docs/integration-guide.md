@@ -190,12 +190,55 @@ const loadCapabilities = async () => {
 />
 ```
 
-## Custom client for auth, cookies, tenant headers, or tracing
+## Generated client options for auth, cookies, tenant headers, or tracing
 
 `EffectAdmin` creates a default fetch-based `HttpApiClient` when you pass `api`.
-For production apps, a custom `client` is often the cleaner seam because the
-host may need CSRF headers, bearer tokens, tenant IDs, tracing, or a custom
-Effect runtime.
+For simple production needs such as session, tenant, role, CSRF, or tracing
+headers, keep the generated client and pass `clientOptions`.
+
+```tsx
+const clientOptions = useMemo(() => ({
+  headers: () => ({
+    "x-admin-role": currentRole,
+    "x-tenant-id": currentTenantId
+  })
+}), [currentRole, currentTenantId])
+
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  basePath="/admin"
+  clientOptions={clientOptions}
+/>
+```
+
+Header functions are evaluated when requests are sent, so they can read current
+session state as long as the closure is kept up to date by the host app.
+Memoize the `clientOptions` object when its values depend on React state, so
+the generated client is recreated only when those values actually change.
+
+If the backend expects typed headers in handlers, declare them on the resource
+contract:
+
+```ts
+const AdminHeaders = Schema.Struct({
+  "x-admin-role": Schema.Literal("admin", "staff", "viewer")
+})
+
+export const users = defineCrudResource({
+  name: "users",
+  model: User,
+  headers: AdminHeaders
+})
+```
+
+The host server must still authorize every handler. Headers and capabilities
+are inputs to your policy, not a replacement for it.
+
+## Custom client escape hatch
+
+For custom middleware, runtime wiring, or a different transport adapter, pass a
+custom `client`.
 
 The client is intentionally small: a resource map containing endpoint
 functions. Each endpoint returns an `Effect`.

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react"
 import type { ReactNode } from "react"
 import type { AdminClient } from "./client.js"
 import { defaultComponents, type EffectAdminComponents } from "./components.js"
+import type { EffectAdminClientOptions } from "./default-client.js"
 import { ErrorState, failureOf, Loading, type Failure } from "./internal.js"
 import { matchAdminRoute, useAdminLocation } from "./router.js"
 import { Home, ListScreen, RecordScreen } from "./screens.js"
@@ -14,6 +15,7 @@ export interface EffectAdminProps {
   readonly resources: ReadonlyArray<AdminResourceDef>
   readonly basePath?: string | undefined
   readonly baseUrl?: string | undefined
+  readonly clientOptions?: EffectAdminClientOptions | undefined
   readonly client?: AdminClient | undefined
   readonly capabilities?: AdminCapabilities | undefined
   readonly loadCapabilities?: (() => AdminCapabilities | PromiseLike<AdminCapabilities>) | undefined
@@ -25,6 +27,7 @@ export const EffectAdmin = ({
   resources,
   basePath = "/admin",
   baseUrl = "",
+  clientOptions,
   client: providedClient,
   capabilities,
   loadCapabilities,
@@ -47,13 +50,13 @@ export const EffectAdmin = ({
     if (!api) { setFailure({ message: "EffectAdmin requires either an HttpApi or a client." }); return }
     let active = true
     import("./default-client.js").then(({ makeDefaultAdminClient }) =>
-      makeDefaultAdminClient(api, baseUrl)
+      makeDefaultAdminClient(api, { ...clientOptions, baseUrl })
     ).then(
       (value) => { if (active) setClient(value) },
       (error) => { if (active) setFailure(failureOf(error)) }
     )
     return () => { active = false }
-  }, [api, baseUrl, providedClient])
+  }, [api, baseUrl, clientOptions, providedClient])
 
   useEffect(() => {
     if (!loadCapabilities) {

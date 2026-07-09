@@ -1,7 +1,7 @@
 import { AdminCapabilities } from "@effect-admin/contracts"
 import { EffectAdmin } from "@effect-admin/react"
 import "@effect-admin/react/styles.css"
-import { StrictMode, useCallback, useState } from "react"
+import { StrictMode, useCallback, useMemo, useState } from "react"
 import { createRoot } from "react-dom/client"
 import * as Schema from "effect/Schema"
 import { AppApi, resources } from "./admin.js"
@@ -10,11 +10,13 @@ type DemoRole = "admin" | "staff" | "viewer"
 
 const ExampleApp = () => {
   const [role, setRole] = useState<DemoRole>("staff")
+  const adminHeaders = useMemo(() => ({ "x-admin-role": role }), [role])
+  const clientOptions = useMemo(() => ({ headers: adminHeaders }), [adminHeaders])
   const loadCapabilities = useCallback(async () => {
-    const response = await fetch(`/api/admin/capabilities?role=${role}`)
+    const response = await fetch("/api/admin/capabilities", { headers: adminHeaders })
     if (!response.ok) throw new Error("Unable to load demo capabilities.")
     return Schema.decodeUnknownPromise(AdminCapabilities)(await response.json())
-  }, [role])
+  }, [adminHeaders])
 
   return (
     <>
@@ -45,6 +47,7 @@ const ExampleApp = () => {
         api={AppApi}
         resources={resources}
         basePath="/admin"
+        clientOptions={clientOptions}
         loadCapabilities={loadCapabilities}
       />
     </>

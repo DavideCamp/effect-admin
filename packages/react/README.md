@@ -38,8 +38,23 @@ Pass `loadCapabilities` when the visible controls depend on the signed-in
 user/session. Capabilities are a UI convenience only; the backend must still
 enforce authorization in every handler.
 
-If your host app needs custom headers, cookies, tracing, or a non-default
-Effect runtime, pass a `client` and type it with the exported `AdminClient`.
+Use `clientOptions` for simple generated-client customization such as session,
+tenant, or role headers:
+
+```tsx
+const clientOptions = useMemo(() => ({
+  headers: () => ({ "x-admin-role": currentRole })
+}), [currentRole])
+
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  clientOptions={clientOptions}
+/>
+```
+
+If your host app needs custom middleware, runtime wiring, or a different
+transport adapter, pass a `client` and type it with the exported `AdminClient`.
 The package also exports `AdminEndpoint`, `AdminRecord`, and `AdminListResult`
 for lightweight custom adapters.
 

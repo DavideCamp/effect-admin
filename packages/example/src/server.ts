@@ -1,4 +1,5 @@
 import {
+  AdminForbidden,
   AdminNotFound,
   AdminValidationError,
   type AdminCapabilities,
@@ -15,8 +16,40 @@ import type { Post } from "./domain/post.js"
 import type { Tag } from "./domain/tag.js"
 import type { User } from "./domain/user.js"
 
+type AdminRole = "admin" | "staff" | "viewer"
+type AdminError = AdminForbidden | AdminNotFound | AdminValidationError
+type AdminRequest = {
+  readonly request: {
+    readonly headers: unknown
+  }
+}
+
 const missing = (resource: string, id: number) =>
   new AdminNotFound({ message: `${resource} ${id} was not found.` })
+
+const forbidden = (operation: string) =>
+  new AdminForbidden({ message: `The current admin role cannot ${operation}.` })
+
+const roleOf = (request: AdminRequest): AdminRole => {
+  if (typeof request.request.headers !== "object" || request.request.headers === null) return "staff"
+  const role = (request.request.headers as Record<string, unknown>)["x-admin-role"]
+  return role === "admin" || role === "staff" || role === "viewer" ? role : "staff"
+}
+
+const authorize = <A, E>(
+  request: AdminRequest,
+  allowed: ReadonlyArray<AdminRole>,
+  operation: string,
+  effect: Effect.Effect<A, E, never>
+) =>
+  allowed.some((role) => role === roleOf(request))
+    ? effect
+    : Effect.fail(forbidden(operation))
+
+const adminEffect = <A>(
+  effect: Effect.Effect<A, unknown, never>
+): Effect.Effect<A, AdminError, never> =>
+  effect as Effect.Effect<A, AdminError, never>
 
 const listRows = <A extends object>(
   source: ReadonlyArray<A>,
@@ -140,12 +173,15 @@ const UsersRepository = {
 
 const UsersCrud = makeCrudHandlers(UsersRepository)
 const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) => handlers
-  .handle("list", UsersCrud.list)
-  .handle("get", UsersCrud.get)
-  .handle("create", UsersCrud.create)
-  .handle("update", UsersCrud.update)
-  .handle("delete", UsersCrud.delete)
-  .handle("suspend", ({ path }) => {
+  .handle("list", (request) => adminEffect(authorize(request, ["admin", "staff", "viewer"], "list users", UsersCrud.list(request))))
+  .handle("get", (request) => adminEffect(authorize(request, ["admin", "staff", "viewer"], "view users", UsersCrud.get(request))))
+  .handle("create", (request) => adminEffect(authorize(request, ["admin", "staff"], "create users", UsersCrud.create(request))))
+  .handle("update", (request) => adminEffect(authorize(request, ["admin", "staff"], "update users", UsersCrud.update(request))))
+  .handle("delete", (request) => adminEffect(authorize(request, ["admin"], "delete users", UsersCrud.delete(request))))
+  .handle("suspend", (request) => {
+    const { path } = request
+    const allowed = ["admin"] as const
+    if (!allowed.some((role) => role === roleOf(request))) return Effect.fail(forbidden("suspend users"))
     const index = users.findIndex((item) => item.id === path.id)
     if (index < 0) return Effect.fail(missing("User", path.id))
     const user: User = { ...users[index]!, active: false }
@@ -190,11 +226,11 @@ const TagsRepository = {
 
 const TagsCrud = makeCrudHandlers(TagsRepository)
 const TagsLive = HttpApiBuilder.group(AppApi, "tags", (handlers) => handlers
-  .handle("list", TagsCrud.list)
-  .handle("get", TagsCrud.get)
-  .handle("create", TagsCrud.create)
-  .handle("update", TagsCrud.update)
-  .handle("delete", TagsCrud.delete)
+  .handle("list", (request) => adminEffect(authorize(request, ["admin", "staff", "viewer"], "list tags", TagsCrud.list(request))))
+  .handle("get", (request) => adminEffect(authorize(request, ["admin", "staff", "viewer"], "view tags", TagsCrud.get(request))))
+  .handle("create", (request) => adminEffect(authorize(request, ["admin", "staff"], "create tags", TagsCrud.create(request))))
+  .handle("update", (request) => adminEffect(authorize(request, ["admin", "staff"], "update tags", TagsCrud.update(request))))
+  .handle("delete", (request) => adminEffect(authorize(request, ["admin"], "delete tags", TagsCrud.delete(request))))
 )
 
 const validatePostRelations = (authorId: number, tagIds: ReadonlyArray<number>) => {
@@ -251,12 +287,15 @@ const PostsRepository = {
 
 const PostsCrud = makeCrudHandlers(PostsRepository)
 const PostsLive = HttpApiBuilder.group(AppApi, "posts", (handlers) => handlers
-  .handle("list", PostsCrud.list)
-  .handle("get", PostsCrud.get)
-  .handle("create", PostsCrud.create)
-  .handle("update", PostsCrud.update)
-  .handle("delete", PostsCrud.delete)
-  .handle("publish", ({ path }) => {
+  .handle("list", (request) => adminEffect(authorize(request, ["admin", "staff", "viewer"], "list posts", PostsCrud.list(request))))
+  .handle("get", (request) => adminEffect(authorize(request, ["admin", "staff", "viewer"], "view posts", PostsCrud.get(request))))
+  .handle("create", (request) => adminEffect(authorize(request, ["admin", "staff"], "create posts", PostsCrud.create(request))))
+  .handle("update", (request) => adminEffect(authorize(request, ["admin", "staff"], "update posts", PostsCrud.update(request))))
+  .handle("delete", (request) => adminEffect(authorize(request, ["admin"], "delete posts", PostsCrud.delete(request))))
+  .handle("publish", (request) => {
+    const { path } = request
+    const allowed = ["admin", "staff"] as const
+    if (!allowed.some((role) => role === roleOf(request))) return Effect.fail(forbidden("publish posts"))
     const index = posts.findIndex((item) => item.id === path.id)
     if (index < 0) return Effect.fail(missing("Post", path.id))
     const post: Post = { ...posts[index]!, status: "published", publishedAt: new Date() }
@@ -265,7 +304,7 @@ const PostsLive = HttpApiBuilder.group(AppApi, "posts", (handlers) => handlers
   })
 )
 
-const capabilitiesForRole = (role: "admin" | "staff" | "viewer" = "staff"): AdminCapabilities => {
+const capabilitiesForRole = (role: AdminRole = "staff"): AdminCapabilities => {
   if (role === "admin") return {}
   if (role === "viewer") {
     return {
@@ -282,8 +321,8 @@ const capabilitiesForRole = (role: "admin" | "staff" | "viewer" = "staff"): Admi
 }
 
 const AdminLive = HttpApiBuilder.group(AppApi, "admin", (handlers) => handlers
-  .handle("capabilities", ({ urlParams }) =>
-    Effect.succeed(capabilitiesForRole(urlParams.role))
+  .handle("capabilities", (request) =>
+    Effect.succeed(capabilitiesForRole(roleOf(request)))
   )
 )
 

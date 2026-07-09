@@ -1,4 +1,5 @@
 import { Schema } from "effect"
+import * as Option from "effect/Option"
 import { describe, expect, it } from "vitest"
 import {
   AdminCapabilities,
@@ -58,6 +59,20 @@ describe("admin HttpApi contracts", () => {
 
     expect(UsersApi.identifier).toBe("users")
     expect(Object.keys(UsersApi.endpoints)).toEqual(["list", "get", "create", "update", "delete"])
+  })
+
+  it("adds optional headers to every generated CRUD endpoint", () => {
+    const User = Schema.Struct({ id: Schema.Int, email: Schema.String })
+    const AdminHeaders = Schema.Struct({ "x-admin-role": Schema.String })
+    const UsersApi = makeCrudApiGroup({
+      name: "users",
+      model: User,
+      headers: AdminHeaders
+    })
+
+    expect(Object.values(UsersApi.endpoints).every((endpoint) =>
+      Option.isSome(endpoint.headersSchema)
+    )).toBe(true)
   })
 
   it("combines generated groups into an HttpApi", () => {

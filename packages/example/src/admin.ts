@@ -9,18 +9,20 @@ import { Tag } from "./domain/tag.js"
 import { User } from "./domain/user.js"
 
 const IdPath = Schema.Struct({ id: Schema.NumberFromString })
-export const AdminRoleParams = Schema.Struct({
-  role: Schema.optional(Schema.Literal("admin", "staff", "viewer"))
+export const AdminSessionHeaders = Schema.Struct({
+  "x-admin-role": Schema.optional(Schema.Literal("admin", "staff", "viewer"))
 })
 
 export const users = defineCrudResource({
   name: "users",
   model: User,
+  headers: AdminSessionHeaders,
   label: "Users",
   list: { columns: ["id", "email", "fullName", "active", "role", "createdAt"] },
   extendApiGroup: (apiGroup) => apiGroup.add(
     HttpApiEndpoint.post("suspend", "/users/:id/suspend")
       .setPath(IdPath)
+      .setHeaders(AdminSessionHeaders)
       .setPayload(SuspendUser)
       .addSuccess(User)
   ),
@@ -31,17 +33,20 @@ export const users = defineCrudResource({
 
 export const tags = defineCrudResource({
   name: "tags",
-  model: Tag
+  model: Tag,
+  headers: AdminSessionHeaders
 })
 
 export const posts = defineCrudResource({
   name: "posts",
   model: Post,
+  headers: AdminSessionHeaders,
   list: { columns: ["id", "title", "authorId", "status", "publishedAt"] },
   fields: { body: { widget: "textarea" } },
   extendApiGroup: (apiGroup) => apiGroup.add(
     HttpApiEndpoint.post("publish", "/posts/:id/publish")
       .setPath(IdPath)
+      .setHeaders(AdminSessionHeaders)
       .setPayload(PublishPost)
       .addSuccess(Post)
   ),
@@ -55,7 +60,7 @@ export const resources = [users, posts, tags] as const
 export const AdminMetaApi = HttpApiGroup.make("admin")
   .add(
     HttpApiEndpoint.get("capabilities", "/admin/capabilities")
-      .setUrlParams(AdminRoleParams)
+      .setHeaders(AdminSessionHeaders)
       .addSuccess(AdminCapabilities)
   )
 

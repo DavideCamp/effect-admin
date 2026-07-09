@@ -48,6 +48,11 @@ export class AdminNotFound extends Schema.TaggedError<AdminNotFound>()(
   { message: Schema.String }
 ) {}
 
+export class AdminForbidden extends Schema.TaggedError<AdminForbidden>()(
+  "AdminForbidden",
+  { message: Schema.String }
+) {}
+
 export const ResourceCapabilities = Schema.Struct({
   list: Schema.optional(Schema.Boolean),
   get: Schema.optional(Schema.Boolean),
@@ -75,6 +80,7 @@ export interface AdminCrudApiConfig<
   readonly path?: `/${string}`
   readonly idParam?: string
   readonly idPath?: Schema.Schema.AnyNoContext
+  readonly headers?: Schema.Schema.AnyNoContext
   /**
    * Payload used by the generated `create` endpoint.
    *
@@ -110,17 +116,23 @@ export const makeCrudApiGroup = <
   const path = config.path ?? `/${config.name}`
   const idParam = config.idParam ?? "id"
   const idPath = config.idPath ?? defaultIdPath
+  const headers = config.headers
   const create = config.create ?? (config.model as unknown as Create)
   const update = config.update ?? Schema.partial(create as Schema.Schema.AnyNoContext)
+  const withHeaders = <Endpoint>(endpoint: Endpoint): Endpoint =>
+    headers
+      ? (endpoint as { setHeaders: (schema: Schema.Schema.AnyNoContext) => Endpoint }).setHeaders(headers)
+      : endpoint
 
   return HttpApiGroup.make(config.name)
     .addError(AdminNotFound, { status: 404 })
+    .addError(AdminForbidden, { status: 403 })
     .addError(AdminValidationError, { status: 400 })
-    .add(HttpApiEndpoint.get("list", path).setUrlParams(AdminListParams).addSuccess(AdminListResult(config.model)))
-    .add(HttpApiEndpoint.get("get", `${path}/:${idParam}`).setPath(idPath).addSuccess(config.model))
-    .add(HttpApiEndpoint.post("create", path).setPayload(create).addSuccess(config.model, { status: 201 }))
-    .add(HttpApiEndpoint.patch("update", `${path}/:${idParam}`).setPath(idPath).setPayload(update).addSuccess(config.model))
-    .add(HttpApiEndpoint.del("delete", `${path}/:${idParam}`).setPath(idPath).addSuccess(HttpApiSchema.NoContent))
+    .add(withHeaders(HttpApiEndpoint.get("list", path).setUrlParams(AdminListParams)).addSuccess(AdminListResult(config.model)))
+    .add(withHeaders(HttpApiEndpoint.get("get", `${path}/:${idParam}`).setPath(idPath)).addSuccess(config.model))
+    .add(withHeaders(HttpApiEndpoint.post("create", path).setPayload(create)).addSuccess(config.model, { status: 201 }))
+    .add(withHeaders(HttpApiEndpoint.patch("update", `${path}/:${idParam}`).setPath(idPath).setPayload(update)).addSuccess(config.model))
+    .add(withHeaders(HttpApiEndpoint.del("delete", `${path}/:${idParam}`).setPath(idPath)).addSuccess(HttpApiSchema.NoContent))
 }
 
 export const makeAdminApi = <
