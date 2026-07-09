@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Plug-and-play React admin generated from Effect Schema and HttpApi",
+  "keywords": [
+    "effect",
+    "effect-admin",
+    "react",
+    "httpapi",
+    "admin"
+  ],
   "sideEffects": [
     "./dist/styles.css"
   ],
@@ -59,6 +66,7 @@
   },
   "publishConfig": {
     "access": "public",
+    "tag": "alpha",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",

@@ -5,6 +5,7 @@ Use changesets for every public package change:
 ```bash
 pnpm changeset
 pnpm version-packages
+pnpm release:check
 pnpm release:alpha
 ```
 
@@ -13,7 +14,17 @@ packages are linked for V1 so they version together while the public interface
 is still settling.
 
 Use the npm `alpha` dist-tag until the API is ready to become the default
-install target.
+install target. The package `publishConfig` also sets `tag: "alpha"` as a
+safety net, but keep the explicit `release:alpha` command in docs and muscle
+memory.
+
+Publish from the branch/commit you want the npm release tags to describe. After
+publishing, verify both npm and git:
+
+```bash
+npm view @effect-admin/react dist-tags version
+git log --oneline --decorate --max-count=5
+```
 
 If npm requires two-factor authentication during publish:
 

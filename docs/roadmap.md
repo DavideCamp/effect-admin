@@ -20,13 +20,23 @@
 - Next.js App Router build fixture
 - Lazy default-client chunk and measured production bundle
 - Publish-ready package exports and metadata
+- First npm feedback release: `@effect-admin/*@0.1.0`
 
-## Release checks for 0.1
+## Release checks for every 0.1.x alpha
 
-- Run typecheck, unit/DOM tests, Vite build, and Next build in CI
-- Inspect npm tarball contents before publishing
+- Run typecheck, unit/DOM tests, Vite build, and Next build before publishing
+- Inspect npm tarball contents with `pnpm release:check`
 - Perform a browser keyboard and core workflow smoke pass
-- Treat the 0.1 public types and exports as frozen after publication
+- Publish with the `alpha` dist-tag until the public types have survived real
+  app usage
+- Ensure git tags point at the commit that produced the npm artifacts
+
+## Next production-hardening work
+
+- Effect 4 beta / `effect/unstable/httpapi` adapter or compatibility story
+- A documented auth/session example for custom headers and cookies
+- One real host-app integration smoke test, separate from the package examples
+- Accessibility smoke checklist for keyboard navigation in the default UI
 
 ## Later, only after external use
 

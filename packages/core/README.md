@@ -3,6 +3,10 @@
 Turns decoded Effect Schema models and `HttpApiGroup` contracts into validated
 admin resource metadata.
 
+```bash
+pnpm add @effect-admin/core@0.1.0 @effect-admin/contracts@0.1.0 @effect-admin/annotations@0.1.0 effect@^3.21.4 @effect/platform@^0.96.2
+```
+
 This package is the convention layer for the happy path:
 
 ```ts
@@ -29,3 +33,6 @@ in the host application.
 
 The package contains no React and no persistence code. effect-admin should
 describe the admin seam; the host application should still own the domain.
+
+The `0.1.x` line targets Effect 3 `HttpApi`. Effect 4 beta support should be a
+separate adapter/release.

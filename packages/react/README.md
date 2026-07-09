@@ -2,6 +2,10 @@
 
 The plug-and-play React UI for effect-admin.
 
+```bash
+pnpm add @effect-admin/react@0.1.0 effect@^3.21.4 @effect/platform@^0.96.2 react react-dom
+```
+
 It is designed for Effect monorepos where the server and frontend can share the
 same `HttpApi` contract and resource definitions. Mount one component and let
 the default admin shell handle the boring CRUD screens:
@@ -33,3 +37,6 @@ Pass `components` to replace only the pieces your application owns:
 Pass `loadCapabilities` when the visible controls depend on the signed-in
 user/session. Capabilities are a UI convenience only; the backend must still
 enforce authorization in every handler.
+
+The `0.1.x` line targets Effect 3 `HttpApi`. Effect 4 beta
+`effect/unstable/httpapi` will need a dedicated adapter/release.

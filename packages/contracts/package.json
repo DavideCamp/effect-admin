@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Opinionated HttpApi contracts shared by effect-admin clients and servers",
+  "keywords": [
+    "effect",
+    "effect-admin",
+    "httpapi",
+    "schema",
+    "admin"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -37,6 +44,7 @@
   },
   "publishConfig": {
     "access": "public",
+    "tag": "alpha",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",

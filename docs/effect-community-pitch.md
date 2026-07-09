@@ -41,6 +41,10 @@ differs**. The default path should feel like:
 - server-side `makeCrudHandlers` to reduce conventional handler boilerplate
   without introducing a database adapter.
 
+The first public package line is `@effect-admin/*@0.1.0`. It targets Effect 3
+`HttpApi`; Effect 4 beta support should be treated as an explicit follow-up
+adapter instead of an implicit promise.
+
 ## Explicit non-goals
 
 effect-admin should not become:
@@ -87,3 +91,6 @@ The V1 target is internal backoffice/admin surfaces. Production use is
 reasonable when the host enforces auth in every handler, serves session-derived
 capabilities, implements paginated/searchable list endpoints, and keeps audit
 logging/business invariants outside the generated UI.
+
+For public communication, position it as a small community package looking for
+real monorepo feedback first, not as an official Effect package.

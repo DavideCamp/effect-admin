@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Zero-dependency annotation entrypoint: the only coupling a host app needs to effect-admin",
+  "keywords": [
+    "effect",
+    "effect-admin",
+    "schema",
+    "admin",
+    "annotations"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -29,6 +36,7 @@
   },
   "publishConfig": {
     "access": "public",
+    "tag": "alpha",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",

@@ -10,11 +10,13 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "pnpm -r --filter './packages/*' run build",
+    "verify": "pnpm typecheck && pnpm test && pnpm build",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
     "publish:alpha": "changeset publish --tag alpha",
     "release:alpha": "pnpm build && changeset publish --tag alpha",
+    "release:check": "pnpm verify && pnpm pack:all",
     "pack:all": "pnpm build && rm -rf artifacts && mkdir -p artifacts && pnpm --filter @effect-admin/annotations --filter @effect-admin/contracts --filter @effect-admin/core --filter @effect-admin/react exec pnpm pack --pack-destination ../../artifacts"
   },
   "devDependencies": {

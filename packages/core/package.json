@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Effect Schema introspection, CRUD conventions, and admin resource definitions",
+  "keywords": [
+    "effect",
+    "effect-admin",
+    "httpapi",
+    "schema",
+    "admin"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -41,6 +48,7 @@
   },
   "publishConfig": {
     "access": "public",
+    "tag": "alpha",
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
