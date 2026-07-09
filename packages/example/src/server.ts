@@ -1,8 +1,10 @@
 import {
   AdminNotFound,
   AdminValidationError,
+  type AdminCapabilities,
   type AdminListParams
 } from "@effect-admin/contracts"
+import { makeCrudHandlers } from "@effect-admin/core"
 import * as HttpApiBuilder from "@effect/platform/HttpApiBuilder"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
 import * as Effect from "effect/Effect"
@@ -90,13 +92,14 @@ let posts: Array<Post> = [
   }
 ]
 
-const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) => handlers
-  .handle("list", ({ urlParams }) => Effect.sync(() => listRows(users, urlParams, ["email", "fullName"])))
-  .handle("get", ({ path }) => {
-    const user = users.find((item) => item.id === path.id)
-    return user ? Effect.succeed(user) : Effect.fail(missing("User", path.id))
-  })
-  .handle("create", ({ payload }) => {
+const UsersRepository = {
+  list: (params: AdminListParams) =>
+    Effect.sync(() => listRows(users, params, ["email", "fullName"])),
+  get: (id: number) => {
+    const user = users.find((item) => item.id === id)
+    return user ? Effect.succeed(user) : Effect.fail(missing("User", id))
+  },
+  create: (payload: Omit<User, "id" | "createdAt">) => {
     if (users.some((user) => user.email === payload.email)) {
       return Effect.fail(new AdminValidationError({
         message: "Please correct the highlighted field.",
@@ -106,11 +109,11 @@ const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) => handlers
     const user: User = { ...payload, id: nextUserId++, createdAt: new Date() }
     users.push(user)
     return Effect.succeed(user)
-  })
-  .handle("update", ({ path, payload }) => {
-    const index = users.findIndex((item) => item.id === path.id)
-    if (index < 0) return Effect.fail(missing("User", path.id))
-    if (payload.email && users.some((user) => user.id !== path.id && user.email === payload.email)) {
+  },
+  update: (id: number, payload: Partial<Omit<User, "id" | "createdAt">>) => {
+    const index = users.findIndex((item) => item.id === id)
+    if (index < 0) return Effect.fail(missing("User", id))
+    if (payload.email && users.some((user) => user.id !== id && user.email === payload.email)) {
       return Effect.fail(new AdminValidationError({
         message: "Please correct the highlighted field.",
         fields: { email: ["This email is already registered."] }
@@ -126,13 +129,22 @@ const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) => handlers
     }
     users[index] = user
     return Effect.succeed(user)
-  })
-  .handle("delete", ({ path }) => {
-    const index = users.findIndex((item) => item.id === path.id)
-    if (index < 0) return Effect.fail(missing("User", path.id))
+  },
+  delete: (id: number) => {
+    const index = users.findIndex((item) => item.id === id)
+    if (index < 0) return Effect.fail(missing("User", id))
     users.splice(index, 1)
     return Effect.void
-  })
+  }
+}
+
+const UsersCrud = makeCrudHandlers(UsersRepository)
+const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) => handlers
+  .handle("list", UsersCrud.list)
+  .handle("get", UsersCrud.get)
+  .handle("create", UsersCrud.create)
+  .handle("update", UsersCrud.update)
+  .handle("delete", UsersCrud.delete)
   .handle("suspend", ({ path }) => {
     const index = users.findIndex((item) => item.id === path.id)
     if (index < 0) return Effect.fail(missing("User", path.id))
@@ -142,13 +154,14 @@ const UsersLive = HttpApiBuilder.group(AppApi, "users", (handlers) => handlers
   })
 )
 
-const TagsLive = HttpApiBuilder.group(AppApi, "tags", (handlers) => handlers
-  .handle("list", ({ urlParams }) => Effect.sync(() => listRows(tags, urlParams, ["name"])))
-  .handle("get", ({ path }) => {
-    const tag = tags.find((item) => item.id === path.id)
-    return tag ? Effect.succeed(tag) : Effect.fail(missing("Tag", path.id))
-  })
-  .handle("create", ({ payload }) => {
+const TagsRepository = {
+  list: (params: AdminListParams) =>
+    Effect.sync(() => listRows(tags, params, ["name"])),
+  get: (id: number) => {
+    const tag = tags.find((item) => item.id === id)
+    return tag ? Effect.succeed(tag) : Effect.fail(missing("Tag", id))
+  },
+  create: (payload: Omit<Tag, "id">) => {
     if (tags.some((tag) => tag.name.toLowerCase() === payload.name.toLowerCase())) {
       return Effect.fail(new AdminValidationError({
         message: "Tag names must be unique.",
@@ -158,21 +171,30 @@ const TagsLive = HttpApiBuilder.group(AppApi, "tags", (handlers) => handlers
     const tag: Tag = { id: nextTagId++, ...payload }
     tags.push(tag)
     return Effect.succeed(tag)
-  })
-  .handle("update", ({ path, payload }) => {
-    const index = tags.findIndex((item) => item.id === path.id)
-    if (index < 0) return Effect.fail(missing("Tag", path.id))
+  },
+  update: (id: number, payload: Partial<Omit<Tag, "id">>) => {
+    const index = tags.findIndex((item) => item.id === id)
+    if (index < 0) return Effect.fail(missing("Tag", id))
     const tag: Tag = { ...tags[index]!, ...(payload.name !== undefined ? { name: payload.name } : {}) }
     tags[index] = tag
     return Effect.succeed(tag)
-  })
-  .handle("delete", ({ path }) => {
-    const index = tags.findIndex((item) => item.id === path.id)
-    if (index < 0) return Effect.fail(missing("Tag", path.id))
+  },
+  delete: (id: number) => {
+    const index = tags.findIndex((item) => item.id === id)
+    if (index < 0) return Effect.fail(missing("Tag", id))
     tags.splice(index, 1)
-    posts = posts.map((post) => ({ ...post, tagIds: post.tagIds.filter((id) => id !== path.id) }))
+    posts = posts.map((post) => ({ ...post, tagIds: post.tagIds.filter((tagId) => tagId !== id) }))
     return Effect.void
-  })
+  }
+}
+
+const TagsCrud = makeCrudHandlers(TagsRepository)
+const TagsLive = HttpApiBuilder.group(AppApi, "tags", (handlers) => handlers
+  .handle("list", TagsCrud.list)
+  .handle("get", TagsCrud.get)
+  .handle("create", TagsCrud.create)
+  .handle("update", TagsCrud.update)
+  .handle("delete", TagsCrud.delete)
 )
 
 const validatePostRelations = (authorId: number, tagIds: ReadonlyArray<number>) => {
@@ -184,22 +206,23 @@ const validatePostRelations = (authorId: number, tagIds: ReadonlyArray<number>) 
     : undefined
 }
 
-const PostsLive = HttpApiBuilder.group(AppApi, "posts", (handlers) => handlers
-  .handle("list", ({ urlParams }) => Effect.sync(() => listRows(posts, urlParams, ["title", "slug", "body"])))
-  .handle("get", ({ path }) => {
-    const post = posts.find((item) => item.id === path.id)
-    return post ? Effect.succeed(post) : Effect.fail(missing("Post", path.id))
-  })
-  .handle("create", ({ payload }) => {
+const PostsRepository = {
+  list: (params: AdminListParams) =>
+    Effect.sync(() => listRows(posts, params, ["title", "slug", "body"])),
+  get: (id: number) => {
+    const post = posts.find((item) => item.id === id)
+    return post ? Effect.succeed(post) : Effect.fail(missing("Post", id))
+  },
+  create: (payload: Omit<Post, "id" | "createdAt">) => {
     const invalid = validatePostRelations(payload.authorId, payload.tagIds)
     if (invalid) return Effect.fail(invalid)
     const post: Post = { ...payload, id: nextPostId++, createdAt: new Date() }
     posts.push(post)
     return Effect.succeed(post)
-  })
-  .handle("update", ({ path, payload }) => {
-    const index = posts.findIndex((item) => item.id === path.id)
-    if (index < 0) return Effect.fail(missing("Post", path.id))
+  },
+  update: (id: number, payload: Partial<Omit<Post, "id" | "createdAt">>) => {
+    const index = posts.findIndex((item) => item.id === id)
+    if (index < 0) return Effect.fail(missing("Post", id))
     const current = posts[index]!
     const authorId = payload.authorId ?? current.authorId
     const tagIds = payload.tagIds ?? current.tagIds
@@ -217,13 +240,22 @@ const PostsLive = HttpApiBuilder.group(AppApi, "posts", (handlers) => handlers
     }
     posts[index] = post
     return Effect.succeed(post)
-  })
-  .handle("delete", ({ path }) => {
-    const index = posts.findIndex((item) => item.id === path.id)
-    if (index < 0) return Effect.fail(missing("Post", path.id))
+  },
+  delete: (id: number) => {
+    const index = posts.findIndex((item) => item.id === id)
+    if (index < 0) return Effect.fail(missing("Post", id))
     posts.splice(index, 1)
     return Effect.void
-  })
+  }
+}
+
+const PostsCrud = makeCrudHandlers(PostsRepository)
+const PostsLive = HttpApiBuilder.group(AppApi, "posts", (handlers) => handlers
+  .handle("list", PostsCrud.list)
+  .handle("get", PostsCrud.get)
+  .handle("create", PostsCrud.create)
+  .handle("update", PostsCrud.update)
+  .handle("delete", PostsCrud.delete)
   .handle("publish", ({ path }) => {
     const index = posts.findIndex((item) => item.id === path.id)
     if (index < 0) return Effect.fail(missing("Post", path.id))
@@ -233,8 +265,30 @@ const PostsLive = HttpApiBuilder.group(AppApi, "posts", (handlers) => handlers
   })
 )
 
+const capabilitiesForRole = (role: "admin" | "staff" | "viewer" = "staff"): AdminCapabilities => {
+  if (role === "admin") return {}
+  if (role === "viewer") {
+    return {
+      users: { create: false, update: false, delete: false, actions: { suspend: false } },
+      posts: { create: false, update: false, delete: false, actions: { publish: false } },
+      tags: { create: false, update: false, delete: false }
+    }
+  }
+  return {
+    users: { delete: false, actions: { suspend: false } },
+    posts: { delete: false },
+    tags: { delete: false }
+  }
+}
+
+const AdminLive = HttpApiBuilder.group(AppApi, "admin", (handlers) => handlers
+  .handle("capabilities", ({ urlParams }) =>
+    Effect.succeed(capabilitiesForRole(urlParams.role))
+  )
+)
+
 const ApiLive = HttpApiBuilder.api(AppApi).pipe(
-  Layer.provide(Layer.mergeAll(UsersLive, TagsLive, PostsLive))
+  Layer.provide(Layer.mergeAll(UsersLive, TagsLive, PostsLive, AdminLive))
 )
 const port = Number(process.env.PORT ?? 3001)
 const ServerLive = HttpApiBuilder.serve().pipe(

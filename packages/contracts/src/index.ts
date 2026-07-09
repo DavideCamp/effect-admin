@@ -48,16 +48,21 @@ export class AdminNotFound extends Schema.TaggedError<AdminNotFound>()(
   { message: Schema.String }
 ) {}
 
-export interface ResourceCapabilities {
-  readonly list?: boolean
-  readonly get?: boolean
-  readonly create?: boolean
-  readonly update?: boolean
-  readonly delete?: boolean
-  readonly actions?: Readonly<Record<string, boolean>>
-}
+export const ResourceCapabilities = Schema.Struct({
+  list: Schema.optional(Schema.Boolean),
+  get: Schema.optional(Schema.Boolean),
+  create: Schema.optional(Schema.Boolean),
+  update: Schema.optional(Schema.Boolean),
+  delete: Schema.optional(Schema.Boolean),
+  actions: Schema.optional(Schema.Record({ key: Schema.String, value: Schema.Boolean }))
+})
+export type ResourceCapabilities = typeof ResourceCapabilities.Type
 
-export type AdminCapabilities = Readonly<Record<string, ResourceCapabilities>>
+export const AdminCapabilities = Schema.Record({
+  key: Schema.String,
+  value: ResourceCapabilities
+})
+export type AdminCapabilities = typeof AdminCapabilities.Type
 
 export interface AdminCrudApiConfig<
   Name extends string,

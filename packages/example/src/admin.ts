@@ -1,5 +1,7 @@
+import { AdminCapabilities } from "@effect-admin/contracts"
 import { defineCrudResource, makeAdminApi } from "@effect-admin/core"
 import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
+import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
 import * as Schema from "effect/Schema"
 import { PublishPost, SuspendUser } from "./contracts.js"
 import { Post } from "./domain/post.js"
@@ -7,6 +9,9 @@ import { Tag } from "./domain/tag.js"
 import { User } from "./domain/user.js"
 
 const IdPath = Schema.Struct({ id: Schema.NumberFromString })
+export const AdminRoleParams = Schema.Struct({
+  role: Schema.optional(Schema.Literal("admin", "staff", "viewer"))
+})
 
 export const users = defineCrudResource({
   name: "users",
@@ -47,4 +52,13 @@ export const posts = defineCrudResource({
 
 export const resources = [users, posts, tags] as const
 
-export const AppApi = makeAdminApi("example", resources, { prefix: "/api" })
+export const AdminMetaApi = HttpApiGroup.make("admin")
+  .add(
+    HttpApiEndpoint.get("capabilities", "/admin/capabilities")
+      .setUrlParams(AdminRoleParams)
+      .addSuccess(AdminCapabilities)
+  )
+
+export const AppApi = makeAdminApi("example", resources)
+  .add(AdminMetaApi)
+  .prefix("/api")

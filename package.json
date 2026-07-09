@@ -10,9 +10,13 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "pnpm -r --filter './packages/*' run build",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish",
     "pack:all": "pnpm build && rm -rf artifacts && mkdir -p artifacts && pnpm --filter @effect-admin/annotations --filter @effect-admin/contracts --filter @effect-admin/core --filter @effect-admin/react exec pnpm pack --pack-destination ../../artifacts"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.29.7",
     "@types/node": "^26.1.0",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",

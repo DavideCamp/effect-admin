@@ -8,7 +8,8 @@ import {
   defineCrudResource,
   deriveAdminCreateSchema,
   deriveAdminUpdateSchema,
-  makeAdminApi
+  makeAdminApi,
+  validateAdminResources
 } from "../src/resource.js"
 
 describe("introspect", () => {
@@ -140,6 +141,25 @@ describe("defineAdminResource", () => {
     expect(resource.actions.suspend?.fields).toMatchObject([
       { name: "reason", title: "Reason", kind: "text" }
     ])
+  })
+
+  it("fails early for duplicate resources and broken relation metadata", () => {
+    const User = Schema.Struct({ id: Schema.Int, email: Schema.String })
+    const Post = Schema.Struct({
+      id: Schema.Int,
+      authorId: Schema.Int.annotations({
+        [AdminField]: { ref: "users", displayField: "missing" }
+      })
+    })
+    const UsersApi = HttpApiGroup.make("users").add(HttpApiEndpoint.get("list", "/users"))
+    const PostsApi = HttpApiGroup.make("posts").add(HttpApiEndpoint.get("list", "/posts"))
+    const users = defineAdminResource({ model: User, apiGroup: UsersApi })
+    const otherUsers = defineAdminResource({ model: User, apiGroup: UsersApi })
+    const posts = defineAdminResource({ model: Post, apiGroup: PostsApi })
+
+    expect(() => validateAdminResources([users, otherUsers])).toThrow(/duplicate resource/)
+    expect(() => validateAdminResources([posts])).toThrow(/missing relation resource/)
+    expect(() => validateAdminResources([posts, users])).toThrow(/missing display field/)
   })
 
   it("can define a resource and conventional CRUD group from the model", () => {

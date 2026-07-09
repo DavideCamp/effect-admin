@@ -54,6 +54,7 @@
 .ea-field input:not([type="checkbox"]), .ea-field select, .ea-field textarea { width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid #ccd2da; border-radius: 7px; background: white; color: var(--ea-text); font: inherit; font-weight: 400; }
 .ea-field textarea { min-height: 120px; resize: vertical; }
 .ea-field select[multiple] { min-height: 112px; }
+.ea-relation input { margin-bottom: 2px; }
 .ea-field input:focus, .ea-field select:focus, .ea-field textarea:focus { border-color: var(--ea-accent); outline: 3px solid rgba(49,94,251,.12); }
 .ea-field small { color: var(--ea-danger); font-weight: 500; }
 .ea-check { display: flex; align-items: center; gap: 9px; }

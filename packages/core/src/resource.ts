@@ -230,6 +230,40 @@ export const defineCrudResource = <
   })
 }
 
+export const validateAdminResources = (
+  resources: ReadonlyArray<AdminResourceDef>
+): void => {
+  const names = new Set<string>()
+  for (const resource of resources) {
+    if (names.has(resource.name)) {
+      throw new Error(`effect-admin: duplicate resource name "${resource.name}"`)
+    }
+    names.add(resource.name)
+  }
+
+  for (const resource of resources) {
+    for (const field of resource.fields) {
+      const relation = field.relation
+      if (relation && !names.has(relation.resource)) {
+        throw new Error(
+          `effect-admin: resource "${resource.name}" field "${field.name}" ` +
+          `references missing relation resource "${relation.resource}"`
+        )
+      }
+      if (relation) {
+        const target = resources.find((item) => item.name === relation.resource)
+        const displayField = relation.displayField
+        if (target && displayField && !target.fields.some((field) => field.name === displayField)) {
+          throw new Error(
+            `effect-admin: resource "${resource.name}" field "${field.name}" ` +
+            `references missing display field "${displayField}" on "${relation.resource}"`
+          )
+        }
+      }
+    }
+  }
+}
+
 export const makeAdminApi = <
   const Id extends string,
   const Resources extends ReadonlyArray<AdminResourceDef<Schema.Schema.AnyNoContext, AdminApiGroup>>

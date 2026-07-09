@@ -1,6 +1,12 @@
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
-import { AdminListParams, AdminValidationError, makeAdminApi, makeCrudApiGroup } from "../src/index.js"
+import {
+  AdminCapabilities,
+  AdminListParams,
+  AdminValidationError,
+  makeAdminApi,
+  makeCrudApiGroup
+} from "../src/index.js"
 
 describe("admin HttpApi contracts", () => {
   it("decodes query strings into the standard list request", async () => {
@@ -23,6 +29,22 @@ describe("admin HttpApi contracts", () => {
     })
     expect(error._tag).toBe("AdminValidationError")
     expect(error.fields?.email).toEqual(["Already registered"])
+  })
+
+  it("decodes the standard capability map", async () => {
+    await expect(Schema.decodeUnknownPromise(AdminCapabilities)({
+      users: {
+        create: false,
+        delete: false,
+        actions: { suspend: true }
+      }
+    })).resolves.toEqual({
+      users: {
+        create: false,
+        delete: false,
+        actions: { suspend: true }
+      }
+    })
   })
 
   it("generates conventional CRUD endpoint groups from a model", () => {

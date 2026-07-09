@@ -6,6 +6,7 @@ export {
   defineAdminResource,
   defineCrudResource,
   makeAdminApi,
+  validateAdminResources,
   type AdminApiGroup,
   type AdminActionConfig,
   type AdminActionDef,
@@ -15,4 +16,11 @@ export {
   type AdminResourceDef,
   type ConventionalOperation
 } from "./resource.js"
+export {
+  bindCrudHandlers,
+  makeCrudHandlers,
+  type AdminCrudHandlerMap,
+  type AdminCrudRepository,
+  type AdminListResultValue
+} from "./server.js"
 export { type FieldKind, type FieldMeta } from "./types.js"
