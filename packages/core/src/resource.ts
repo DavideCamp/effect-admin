@@ -12,6 +12,8 @@ import type { FieldMeta } from "./types.js"
 
 export type ConventionalOperation = "list" | "get" | "create" | "update" | "delete"
 
+const conventionalOperations = ["list", "get", "create", "update", "delete"] as const
+
 /** The small runtime surface effect-admin needs from an HttpApiGroup. */
 export interface AdminApiGroup {
   readonly identifier: string
@@ -101,6 +103,48 @@ export type AdminCrudResourceConfig<
 const humanize = (value: string) =>
   value.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
 
+type EndpointWithPayload = {
+  readonly payloadSchema?: Option.Option<Schema.Schema.Any>
+}
+
+const resolveOperations = (
+  apiGroup: AdminApiGroup,
+  overrides: AdminResourceConfig<Schema.Schema.AnyNoContext>["operations"]
+): Readonly<Partial<Record<ConventionalOperation, string>>> => {
+  const operations: Partial<Record<ConventionalOperation, string>> = {}
+  for (const operation of conventionalOperations) {
+    const endpoint = overrides?.[operation]
+    if (endpoint === false) continue
+    const endpointName = endpoint ?? operation
+    if (endpointName in apiGroup.endpoints) operations[operation] = endpointName
+  }
+  return operations
+}
+
+const defineActions = (
+  resourceName: string,
+  apiGroup: AdminApiGroup,
+  actions: AdminResourceConfig<Schema.Schema.AnyNoContext>["actions"] = {}
+): Readonly<Record<string, AdminActionDef>> => {
+  const entries: Array<[string, AdminActionDef]> = []
+  for (const [name, action] of Object.entries(actions)) {
+    const endpoint = apiGroup.endpoints[action.endpoint] as EndpointWithPayload | undefined
+    if (!endpoint) {
+      throw new Error(
+        `effect-admin: resource "${resourceName}" action references missing endpoint "${action.endpoint}"`
+      )
+    }
+    const payload = endpoint.payloadSchema
+      ? Option.getOrUndefined(endpoint.payloadSchema)
+      : undefined
+    entries.push([name, {
+      ...action,
+      fields: payload ? introspect(payload.ast) : []
+    }])
+  }
+  return Object.fromEntries(entries)
+}
+
 export const deriveAdminCreateSchema = <S extends Schema.Schema.AnyNoContext>(
   model: S
 ): Schema.Schema.AnyNoContext => {
@@ -144,37 +188,6 @@ export const defineAdminResource = <
     }
   }
 
-  const operations: Partial<Record<ConventionalOperation, string>> = {}
-  for (const operation of ["list", "get", "create", "update", "delete"] as const) {
-    const endpoint = config.operations?.[operation]
-    if (endpoint === false) continue
-    const endpointName = endpoint ?? operation
-    if (endpointName in config.apiGroup.endpoints) operations[operation] = endpointName
-  }
-
-  for (const action of Object.values(config.actions ?? {})) {
-    if (!(action.endpoint in config.apiGroup.endpoints)) {
-      throw new Error(
-        `effect-admin: resource "${name}" action references missing endpoint "${action.endpoint}"`
-      )
-    }
-  }
-
-  const actions = Object.fromEntries(
-    Object.entries(config.actions ?? {}).map(([name, action]) => {
-      const endpoint = config.apiGroup.endpoints[action.endpoint] as {
-        readonly payloadSchema?: Option.Option<Schema.Schema.Any>
-      }
-      const payload = endpoint.payloadSchema
-        ? Option.getOrUndefined(endpoint.payloadSchema)
-        : undefined
-      return [name, {
-        ...action,
-        fields: payload ? introspect(payload.ast) : []
-      } satisfies AdminActionDef]
-    })
-  )
-
   return {
     name,
     label: config.label ?? humanize(name),
@@ -185,8 +198,8 @@ export const defineAdminResource = <
     fields,
     fieldConfig: config.fields ?? {},
     listColumns,
-    operations,
-    actions
+    operations: resolveOperations(config.apiGroup, config.operations),
+    actions: defineActions(name, config.apiGroup, config.actions)
   }
 }
 
@@ -233,32 +246,31 @@ export const defineCrudResource = <
 export const validateAdminResources = (
   resources: ReadonlyArray<AdminResourceDef>
 ): void => {
-  const names = new Set<string>()
+  const resourcesByName = new Map<string, AdminResourceDef>()
   for (const resource of resources) {
-    if (names.has(resource.name)) {
+    if (resourcesByName.has(resource.name)) {
       throw new Error(`effect-admin: duplicate resource name "${resource.name}"`)
     }
-    names.add(resource.name)
+    resourcesByName.set(resource.name, resource)
   }
 
   for (const resource of resources) {
     for (const field of resource.fields) {
       const relation = field.relation
-      if (relation && !names.has(relation.resource)) {
+      if (!relation) continue
+      const target = resourcesByName.get(relation.resource)
+      if (!target) {
         throw new Error(
           `effect-admin: resource "${resource.name}" field "${field.name}" ` +
           `references missing relation resource "${relation.resource}"`
         )
       }
-      if (relation) {
-        const target = resources.find((item) => item.name === relation.resource)
-        const displayField = relation.displayField
-        if (target && displayField && !target.fields.some((field) => field.name === displayField)) {
-          throw new Error(
-            `effect-admin: resource "${resource.name}" field "${field.name}" ` +
-            `references missing display field "${displayField}" on "${relation.resource}"`
-          )
-        }
+      const displayField = relation.displayField
+      if (displayField && !target.fields.some((field) => field.name === displayField)) {
+        throw new Error(
+          `effect-admin: resource "${resource.name}" field "${field.name}" ` +
+          `references missing display field "${displayField}" on "${relation.resource}"`
+        )
       }
     }
   }

@@ -41,11 +41,11 @@ export interface AdminCrudRepository<
 > {
   readonly list: (
     params: AdminListParams
-  ) => Effect.Effect<AdminListResultValue<Model>, any, never>
-  readonly get: (id: Id) => Effect.Effect<Model, any, never>
-  readonly create: (payload: Create) => Effect.Effect<Model, any, never>
-  readonly update: (id: Id, payload: Update) => Effect.Effect<Model, any, never>
-  readonly delete: (id: Id) => Effect.Effect<void, any, never>
+  ) => Effect.Effect<AdminListResultValue<Model>, unknown, never>
+  readonly get: (id: Id) => Effect.Effect<Model, unknown, never>
+  readonly create: (payload: Create) => Effect.Effect<Model, unknown, never>
+  readonly update: (id: Id, payload: Update) => Effect.Effect<Model, unknown, never>
+  readonly delete: (id: Id) => Effect.Effect<void, unknown, never>
 }
 
 export interface AdminCrudHandlerMap<
@@ -56,19 +56,19 @@ export interface AdminCrudHandlerMap<
 > {
   readonly list: (
     request: unknown
-  ) => Effect.Effect<AdminListResultValue<Model>, any, never>
+  ) => Effect.Effect<AdminListResultValue<Model>, unknown, never>
   readonly get: (
     request: unknown
-  ) => Effect.Effect<Model, any, never>
+  ) => Effect.Effect<Model, unknown, never>
   readonly create: (
     request: unknown
-  ) => Effect.Effect<Model, any, never>
+  ) => Effect.Effect<Model, unknown, never>
   readonly update: (
     request: unknown
-  ) => Effect.Effect<Model, any, never>
+  ) => Effect.Effect<Model, unknown, never>
   readonly delete: (
     request: unknown
-  ) => Effect.Effect<void, any, never>
+  ) => Effect.Effect<void, unknown, never>
 }
 
 /**

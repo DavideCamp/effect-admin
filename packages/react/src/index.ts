@@ -8,4 +8,9 @@ export {
   type LayoutProps,
   type TextInputProps
 } from "./components.js"
-export { type AdminClient } from "./client.js"
+export {
+  type AdminClient,
+  type AdminEndpoint,
+  type AdminListResult,
+  type AdminRecord
+} from "./client.js"

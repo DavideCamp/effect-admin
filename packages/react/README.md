@@ -38,5 +38,10 @@ Pass `loadCapabilities` when the visible controls depend on the signed-in
 user/session. Capabilities are a UI convenience only; the backend must still
 enforce authorization in every handler.
 
+If your host app needs custom headers, cookies, tracing, or a non-default
+Effect runtime, pass a `client` and type it with the exported `AdminClient`.
+The package also exports `AdminEndpoint`, `AdminRecord`, and `AdminListResult`
+for lightweight custom adapters.
+
 The `0.1.x` line targets Effect 3 `HttpApi`. Effect 4 beta
 `effect/unstable/httpapi` will need a dedicated adapter/release.

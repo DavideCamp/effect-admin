@@ -1,5 +1,6 @@
 import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
 import type { ComponentType, ReactNode } from "react"
+import type { AdminRecord } from "./client.js"
 import { navigate } from "./router.js"
 
 export interface LayoutProps {
@@ -21,8 +22,8 @@ export interface TextInputProps {
 export interface DataTableProps {
   readonly resource: AdminResourceDef
   readonly fields: ReadonlyArray<FieldMeta>
-  readonly rows: ReadonlyArray<Record<string, unknown>>
-  readonly onOpen?: ((row: Record<string, unknown>) => void) | undefined
+  readonly rows: ReadonlyArray<AdminRecord>
+  readonly onOpen?: ((row: AdminRecord) => void) | undefined
   readonly orderBy?: string | undefined
   readonly orderDir?: "asc" | "desc" | undefined
   readonly onSort?: ((field: string) => void) | undefined

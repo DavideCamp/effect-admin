@@ -3,7 +3,7 @@ import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
 import * as Dialog from "@radix-ui/react-dialog"
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
-import { runEndpoint, type AdminClient } from "./client.js"
+import { runEndpoint, type AdminClient, type AdminListResult, type AdminRecord } from "./client.js"
 import type { EffectAdminComponents, TextInputProps } from "./components.js"
 import {
   can,
@@ -86,12 +86,12 @@ export const ListScreen = ({
       value: field.kind === "checkbox" ? value === "true" : value
     }]
   })
-  const [result, setResult] = useState<{ rows: ReadonlyArray<Record<string, unknown>>; total: number }>()
+  const [result, setResult] = useState<AdminListResult>()
   const [failure, setFailure] = useState<Failure>()
   const [revision, setRevision] = useState(0)
 
   useEffect(() => {
-    const method = endpoint(client, resource, "list")
+    const method = endpoint<AdminListResult>(client, resource, "list")
     if (!method) {
       setFailure({ message: `Resource "${resource.label}" has no list endpoint.` })
       return
@@ -183,7 +183,7 @@ export const ListScreen = ({
               page: undefined
             })}
             {...(resource.operations.get && can(capabilities, resource.name, "get") ? {
-              onOpen: (row: Record<string, unknown>) =>
+              onOpen: (row: AdminRecord) =>
                 navigate(`${basePath}/${resource.name}/${String(row[resource.primaryKey])}`)
             } : {})}
           />
@@ -211,7 +211,7 @@ const RelationInput = ({
   onChange
 }: TextInputProps & { client: AdminClient; resources: ReadonlyArray<AdminResourceDef> }) => {
   const relation = resources.find((item) => item.name === field.relation?.resource)
-  const [rows, setRows] = useState<ReadonlyArray<Record<string, unknown>>>([])
+  const [rows, setRows] = useState<ReadonlyArray<AdminRecord>>([])
   const [search, setSearch] = useState("")
   const [loading, setLoading] = useState(false)
   const [lookupError, setLookupError] = useState<string>()
@@ -219,7 +219,7 @@ const RelationInput = ({
 
   useEffect(() => {
     if (!relation) return
-    const method = endpoint(client, relation, "list")
+    const method = endpoint<AdminListResult>(client, relation, "list")
     if (!method) return
     let active = true
     setLoading(true)
@@ -365,7 +365,7 @@ export const RecordScreen = ({
   capabilities?: AdminCapabilities | undefined
   TextInput: EffectAdminComponents["TextInput"]
 }) => {
-  const [record, setRecord] = useState<Record<string, unknown>>(
+  const [record, setRecord] = useState<AdminRecord>(
     mode === "create" ? initialRecord(resource) : {}
   )
   const [loading, setLoading] = useState(mode !== "create")
@@ -373,13 +373,13 @@ export const RecordScreen = ({
   const [saving, setSaving] = useState(false)
   const [runningAction, setRunningAction] = useState<string>()
   const [activeAction, setActiveAction] = useState<string>()
-  const [actionValues, setActionValues] = useState<Record<string, unknown>>({})
+  const [actionValues, setActionValues] = useState<AdminRecord>({})
   const [actionFailure, setActionFailure] = useState<Failure>()
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   useEffect(() => {
     if (mode === "create" || id === undefined) return
-    const method = endpoint(client, resource, "get")
+    const method = endpoint<AdminRecord>(client, resource, "get")
     if (!method) { setFailure({ message: "This resource has no get endpoint." }); setLoading(false); return }
     let active = true
     setLoading(true)
@@ -399,9 +399,9 @@ export const RecordScreen = ({
   const submit = (event: FormEvent) => {
     event.preventDefault()
     const operation = mode === "create" ? "create" : "update"
-    const method = endpoint(client, resource, operation)
+    const method = endpoint<AdminRecord>(client, resource, operation)
     if (!method) return
-    const payload = Object.fromEntries(editableFields.flatMap((field) => {
+    const payload: AdminRecord = Object.fromEntries(editableFields.flatMap((field) => {
       const value = record[field.name]
       if (value === "" && field.optional) return []
       return [[field.name, value]]
@@ -423,7 +423,7 @@ export const RecordScreen = ({
   }
   const remove = () => {
     if (id === undefined) return
-    const method = endpoint(client, resource, "delete")
+    const method = endpoint<void>(client, resource, "delete")
     if (!method) return
     setSaving(true)
     runEndpoint(method({ path: { id: coerceId(resource, id) } })).then(
@@ -431,7 +431,7 @@ export const RecordScreen = ({
       (error) => { setFailure(failureOf(error)); setSaving(false); setDeleteOpen(false) }
     )
   }
-  const runAction = (name: string, payload?: Record<string, unknown>) => {
+  const runAction = (name: string, payload?: AdminRecord) => {
     if (id === undefined) return
     const action = resource.actions[name]
     const method = action ? client[resource.groupName]?.[action.endpoint] : undefined
@@ -444,7 +444,7 @@ export const RecordScreen = ({
       ...(action.fields.length > 0 ? { payload: payload ?? {} } : {})
     })).then(
       (value) => {
-        if (value && typeof value === "object") setRecord(value as Record<string, unknown>)
+        if (value && typeof value === "object") setRecord(value as AdminRecord)
         setRunningAction(undefined)
         setActiveAction(undefined)
         setActionValues({})
