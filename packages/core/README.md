@@ -4,7 +4,7 @@ Turns decoded Effect Schema models and `HttpApiGroup` contracts into validated
 admin resource metadata.
 
 ```bash
-pnpm add @effect-admin/core@0.1.2 @effect-admin/contracts@0.1.2 @effect-admin/annotations@0.1.1 effect@^3.21.4 @effect/platform@^0.96.2
+pnpm add @effect-admin/core@0.1.3 @effect-admin/contracts@0.1.2 @effect-admin/annotations@0.1.1 effect@^3.21.4 @effect/platform@^0.96.2
 ```
 
 This package is the convention layer for the happy path:
