@@ -24,10 +24,10 @@ does not write directly to your database or create an identity system.
 
 ## Status
 
-`0.1.1` is the current alpha package line:
+`0.1.2` is the current alpha package line:
 
 ```bash
-pnpm add @effect-admin/react@0.1.1
+pnpm add @effect-admin/react@alpha
 ```
 
 The API is still alpha and not semver-stable. Use it for internal admin and
@@ -73,14 +73,14 @@ frontend app.
 
 ```bash
 pnpm --filter @your-org/app-contract add \
-  @effect-admin/core@0.1.1 \
-  @effect-admin/contracts@0.1.1 \
-  @effect-admin/annotations@0.1.1 \
+  @effect-admin/core@alpha \
+  @effect-admin/contracts@alpha \
+  @effect-admin/annotations@alpha \
   effect@^3.21.4 \
   @effect/platform@^0.96.2
 
 pnpm --filter @your-org/web add \
-  @effect-admin/react@0.1.1 \
+  @effect-admin/react@alpha \
   effect@^3.21.4 \
   @effect/platform@^0.96.2 \
   react \
@@ -101,14 +101,24 @@ apps/web/                # React/Next admin mount
 For alpha-track installs you can use the dist-tag instead of pinning:
 
 ```bash
-pnpm add @effect-admin/react@alpha
+pnpm add @effect-admin/react@alpha @effect-admin/core@alpha @effect-admin/contracts@alpha
 ```
 
 The safer option for a real app is pinning an exact version until the public
-API settles.
+API settles:
+
+```bash
+pnpm add @effect-admin/react@0.1.2 @effect-admin/core@0.1.2 @effect-admin/contracts@0.1.2
+```
 
 For a fuller setup with capabilities, custom clients, Vite, and Next.js, see
 [docs/integration-guide.md](docs/integration-guide.md).
+
+For the smallest copy-paste template, see
+[examples/minimal-effect-react](examples/minimal-effect-react).
+
+Before promoting an alpha to `latest`, run the external checklist in
+[docs/smoke-test.md](docs/smoke-test.md).
 
 ## Quick start: Effect model to admin
 
@@ -234,7 +244,34 @@ export const resources = [users]
 
 Field identity is the **decoded model key**. A field declared with
 `Schema.fromKey("full_name")` is `fullName` in admin configuration because
-that is what the decoded `HttpApiClient` returns.
+that is what the decoded `HttpApiClient` returns. Resource configuration is
+typed against those decoded keys, so obvious mistakes in `primaryKey`,
+`list.columns`, and `fields` are caught by TypeScript.
+
+The public React contract for the 0.1.x line is intentionally small:
+
+```tsx
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  basePath="/admin"
+  pageSize={50}
+  baseUrl=""
+  clientOptions={{
+    headers: () => ({ authorization: `Bearer ${token}` }),
+    fetchOptions: { credentials: "include" }
+  }}
+  components={{
+    Layout: MyLayout,
+    TextInput: MyTextInput,
+    DataTable: MyDataTable
+  }}
+/>
+```
+
+Use `api` for the generated `HttpApiClient`. Use `client` only when the host
+application needs a completely custom transport/runtime. Use `components` to
+replace default UI slots without forking the admin behavior.
 
 ## React setup
 
@@ -260,7 +297,8 @@ pass `clientOptions`:
 
 ```tsx
 const clientOptions = useMemo(() => ({
-  headers: () => ({ "x-admin-role": currentRole })
+  headers: () => ({ "x-admin-role": currentRole }),
+  fetchOptions: { credentials: "include" }
 }), [currentRole])
 
 <EffectAdmin
@@ -273,6 +311,10 @@ const clientOptions = useMemo(() => ({
 
 For custom middleware, runtime wiring, or a different transport adapter, pass
 `client` instead.
+
+Use `clientOptions.fetchOptions` for cookie-backed sessions or other fetch
+runtime options. Use `clientOptions.transformClient` only when you need lower
+level Effect `HttpClient` middleware.
 
 ### Next.js
 
@@ -291,7 +333,9 @@ export default function AdminPage() {
 ```
 
 The small internal router owns URLs below `basePath`; it has no dependency on
-Next Router, React Router, or TanStack Router.
+Next Router, React Router, or TanStack Router. Generated links are encoded and
+`basePath` is normalized, so `/admin/`, `/admin`, and encoded record ids behave
+consistently.
 
 ## Minimal core, custom shell
 
@@ -510,7 +554,9 @@ packages unless the Effect maintainers explicitly adopt them.
 
 Because `0.1.0` was the first published version, npm may still show it as
 `latest` while newer `0.1.x` releases are published under the `alpha` tag.
-Keep using the `alpha` tag until the API is intentionally promoted.
+Keep using the `alpha` tag until the API is intentionally promoted. Do not move
+the npm `latest` tag until the current alpha has passed a smoke test in a real
+external Effect app.
 
 If npm returns `E403` with “Two-factor authentication ... is required”, publish
 with a fresh one-time password from your authenticator app:

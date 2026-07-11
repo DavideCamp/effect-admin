@@ -15,6 +15,7 @@ export interface EffectAdminProps {
   readonly resources: ReadonlyArray<AdminResourceDef>
   readonly basePath?: string | undefined
   readonly baseUrl?: string | undefined
+  readonly pageSize?: number | undefined
   readonly clientOptions?: EffectAdminClientOptions | undefined
   readonly client?: AdminClient | undefined
   readonly capabilities?: AdminCapabilities | undefined
@@ -27,6 +28,7 @@ export const EffectAdmin = ({
   resources,
   basePath = "/admin",
   baseUrl = "",
+  pageSize = 25,
   clientOptions,
   client: providedClient,
   capabilities,
@@ -92,7 +94,7 @@ export const EffectAdmin = ({
   else if (route.screen === "home") content = <Home resources={validatedResources} basePath={basePath} />
   else if (!resource) content = <div className="ea-state">Resource not found.</div>
   else if (route.screen === "list") content = <ListScreen {...{
-    client, resource, basePath, location, capabilities: effectiveCapabilities, DataTable: slots.DataTable
+    client, resource, basePath, location, pageSize, capabilities: effectiveCapabilities, DataTable: slots.DataTable
   }} />
   else if (route.screen === "create" || route.screen === "detail" || route.screen === "edit") {
     content = <RecordScreen

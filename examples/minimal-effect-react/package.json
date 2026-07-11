@@ -1,0 +1,30 @@
+{
+  "name": "minimal-effect-admin-react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n api,web 'tsx src/server.ts' 'vite'",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect-admin/annotations": "alpha",
+    "@effect-admin/contracts": "alpha",
+    "@effect-admin/core": "alpha",
+    "@effect-admin/react": "alpha",
+    "@effect/platform": "^0.96.2",
+    "@effect/platform-node": "^0.107.0",
+    "effect": "^3.21.4",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "concurrently": "^9.2.0",
+    "tsx": "^4.23.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.0.0"
+  }
+}

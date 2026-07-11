@@ -21,6 +21,10 @@
 - Lazy default-client chunk and measured production bundle
 - Publish-ready package exports and metadata
 - First npm feedback release: `@effect-admin/*@0.1.0`
+- Generated-client `clientOptions` for auth/session/tenant/tracing headers
+- Typed resource field config against decoded model keys
+- Minimal copy-paste React template outside the publishable workspace
+- External smoke-test checklist before npm `latest` promotion
 
 ## Release checks for every 0.1.x alpha
 
@@ -30,11 +34,12 @@
 - Publish with the `alpha` dist-tag until the public types have survived real
   app usage
 - Ensure git tags point at the commit that produced the npm artifacts
+- Keep `latest` unchanged until a published alpha passes one real external app
+  smoke test
 
 ## Next production-hardening work
 
 - Effect 4 beta / `effect/unstable/httpapi` adapter or compatibility story
-- A documented auth/session example for custom headers and cookies
 - One real host-app integration smoke test, separate from the package examples
 - Accessibility smoke checklist for keyboard navigation in the default UI
 

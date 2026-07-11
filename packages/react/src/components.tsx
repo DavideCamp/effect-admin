@@ -1,7 +1,7 @@
 import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
 import type { ComponentType, ReactNode } from "react"
 import type { AdminRecord } from "./client.js"
-import { navigate } from "./router.js"
+import { navigate, normalizeBasePath, resourcePath } from "./router.js"
 
 export interface LayoutProps {
   readonly basePath: string
@@ -45,10 +45,10 @@ export const DefaultLayout = ({
     <aside className="ea-sidebar">
       <a
         className="ea-brand"
-        href={basePath}
+        href={normalizeBasePath(basePath)}
         onClick={(event) => {
           event.preventDefault()
-          navigate(basePath)
+          navigate(normalizeBasePath(basePath))
         }}
       >
         Effect Admin
@@ -58,10 +58,10 @@ export const DefaultLayout = ({
           <a
             key={resource.name}
             className={resource.name === currentResource ? "is-active" : undefined}
-            href={`${basePath}/${resource.name}`}
+            href={resourcePath(basePath, resource.name)}
             onClick={(event) => {
               event.preventDefault()
-              navigate(`${basePath}/${resource.name}`)
+              navigate(resourcePath(basePath, resource.name))
             }}
           >
             {resource.label}
@@ -138,7 +138,11 @@ export const DefaultDataTable = ({
                 <button
                   type="button"
                   className="ea-row-open"
-                  aria-label={`Open ${String(row[resource.primaryKey])}`}
+                  aria-label={
+                    row[resource.primaryKey] === undefined || row[resource.primaryKey] === null
+                      ? `Open row ${index + 1}`
+                      : `Open ${String(row[resource.primaryKey])}`
+                  }
                   onClick={(event) => {
                     event.stopPropagation()
                     onOpen(row)

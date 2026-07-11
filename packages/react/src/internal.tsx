@@ -77,7 +77,13 @@ export const endpoint = <Success = unknown, Request = unknown, Error = unknown>(
     : client[resource.groupName]?.[name] as AdminEndpoint<Request, Success, Error> | undefined
 }
 
-export const Loading = () => <div className="ea-state">Loading…</div>
+export const Loading = () => (
+  <div className="ea-state ea-loading" role="status">
+    <span className="ea-spinner" aria-hidden="true" />
+    <strong>Loading</strong>
+    <p>Fetching admin data…</p>
+  </div>
+)
 
 export const ErrorState = ({ failure, retry }: { failure: Failure; retry?: () => void }) => (
   <div className="ea-state ea-error" role="alert">

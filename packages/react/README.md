@@ -3,7 +3,7 @@
 The plug-and-play React UI for effect-admin.
 
 ```bash
-pnpm add @effect-admin/react@0.1.1 effect@^3.21.4 @effect/platform@^0.96.2 react react-dom
+pnpm add @effect-admin/react@0.1.2 effect@^3.21.4 @effect/platform@^0.96.2 react react-dom
 ```
 
 It is designed for Effect monorepos where the server and frontend can share the
@@ -19,6 +19,7 @@ import "@effect-admin/react/styles.css"
 
 The internal router is `basePath`-based and framework-neutral, so the same
 component can be mounted in Vite, Next.js App Router, or another React host.
+Generated links are encoded and `basePath` is normalized.
 
 Pass `components` to replace only the pieces your application owns:
 
@@ -43,7 +44,8 @@ tenant, or role headers:
 
 ```tsx
 const clientOptions = useMemo(() => ({
-  headers: () => ({ "x-admin-role": currentRole })
+  headers: () => ({ "x-admin-role": currentRole }),
+  fetchOptions: { credentials: "include" }
 }), [currentRole])
 
 <EffectAdmin
@@ -57,6 +59,18 @@ If your host app needs custom middleware, runtime wiring, or a different
 transport adapter, pass a `client` and type it with the exported `AdminClient`.
 The package also exports `AdminEndpoint`, `AdminRecord`, and `AdminListResult`
 for lightweight custom adapters.
+
+The stable 0.1.x integration surface is intentionally small:
+
+- `api` for generated Effect `HttpApiClient` usage;
+- `resources` for the admin metadata produced by `@effect-admin/core`;
+- `basePath` for framework-neutral routing;
+- `pageSize` for generated list requests;
+- `clientOptions` for headers and generated-client transforms;
+- `clientOptions.fetchOptions` for cookie-backed sessions, e.g.
+  `{ credentials: "include" }`;
+- `client` for a complete custom transport;
+- `components` for replacing the default layout, text input, or data table.
 
 The `0.1.x` line targets Effect 3 `HttpApi`. Effect 4 beta
 `effect/unstable/httpapi` will need a dedicated adapter/release.

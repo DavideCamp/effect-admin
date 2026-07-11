@@ -16,7 +16,7 @@ import {
   Loading,
   type Failure
 } from "./internal.js"
-import { navigate } from "./router.js"
+import { createPath, editPath, navigate, recordPath, resourcePath } from "./router.js"
 
 const useDebounced = (value: string, delayMs: number) => {
   const [debounced, setDebounced] = useState(value)
@@ -39,10 +39,10 @@ export const Home = ({ resources, basePath }: {
       {resources.map((resource) => (
         <a
           key={resource.name}
-          href={`${basePath}/${resource.name}`}
+          href={resourcePath(basePath, resource.name)}
           onClick={(event) => {
             event.preventDefault()
-            navigate(`${basePath}/${resource.name}`)
+            navigate(resourcePath(basePath, resource.name))
           }}
         >
           <strong>{resource.label}</strong>
@@ -58,6 +58,7 @@ export const ListScreen = ({
   resource,
   basePath,
   location,
+  pageSize,
   capabilities,
   DataTable
 }: {
@@ -65,12 +66,13 @@ export const ListScreen = ({
   resource: AdminResourceDef
   basePath: string
   location: string
+  pageSize: number
   capabilities?: AdminCapabilities | undefined
   DataTable: EffectAdminComponents["DataTable"]
 }) => {
   const query = useMemo(() => new URLSearchParams(location.split("?")[1] ?? ""), [location])
   const page = Math.max(1, Number(query.get("page") ?? 1) || 1)
-  const pageSize = 25
+  const effectivePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 25
   const search = query.get("search") ?? ""
   const orderBy = query.get("orderBy") ?? undefined
   const orderDir = query.get("orderDir") === "desc" ? "desc" : "asc"
@@ -101,7 +103,7 @@ export const ListScreen = ({
     runEndpoint(method({
       urlParams: {
         page,
-        pageSize,
+        pageSize: effectivePageSize,
         ...(search ? { search } : {}),
         ...(orderBy ? { orderBy, orderDir } : {}),
         ...(filters.length ? { filters } : {})
@@ -111,7 +113,7 @@ export const ListScreen = ({
       (error) => { if (active) setFailure(failureOf(error)) }
     )
     return () => { active = false }
-  }, [client, resource, page, search, orderBy, orderDir, JSON.stringify(filters), revision])
+  }, [client, resource, page, effectivePageSize, search, orderBy, orderDir, JSON.stringify(filters), revision])
 
   const setQuery = (changes: Record<string, string | undefined>) => {
     const next = new URLSearchParams(query)
@@ -119,7 +121,7 @@ export const ListScreen = ({
       if (value === undefined || value === "") next.delete(key)
       else next.set(key, value)
     }
-    navigate(`${basePath}/${resource.name}${next.size ? `?${next}` : ""}`)
+    navigate(`${resourcePath(basePath, resource.name)}${next.size ? `?${next}` : ""}`)
   }
   const fields = resource.listColumns
     .map((name) => fieldByName(resource, name))
@@ -132,7 +134,7 @@ export const ListScreen = ({
       <header className="ea-page-header">
         <div><p className="ea-eyebrow">Resource</p><h1>{resource.label}</h1></div>
         {resource.operations.create && can(capabilities, resource.name, "create") && (
-          <button className="ea-button" onClick={() => navigate(`${basePath}/${resource.name}/new`)}>
+          <button className="ea-button" onClick={() => navigate(createPath(basePath, resource.name))}>
             Create
           </button>
         )}
@@ -168,7 +170,10 @@ export const ListScreen = ({
         ) : null)}
       </div>
       {failure ? <ErrorState failure={failure} retry={() => setRevision((n) => n + 1)} /> : !result ? <Loading /> : result.rows.length === 0 ? (
-        <div className="ea-state">No records found.</div>
+        <div className="ea-state ea-empty">
+          <strong>No records found</strong>
+          <p>Try changing search or filters.</p>
+        </div>
       ) : (
         <>
           <DataTable
@@ -183,16 +188,25 @@ export const ListScreen = ({
               page: undefined
             })}
             {...(resource.operations.get && can(capabilities, resource.name, "get") ? {
-              onOpen: (row: AdminRecord) =>
-                navigate(`${basePath}/${resource.name}/${String(row[resource.primaryKey])}`)
+              onOpen: (row: AdminRecord) => {
+                const id = row[resource.primaryKey]
+                if (id !== undefined && id !== null) {
+                  navigate(recordPath(basePath, resource.name, String(id)))
+                } else {
+                  setFailure({
+                    title: "Missing primary key",
+                    message: `The "${resource.label}" list row does not include "${resource.primaryKey}".`
+                  })
+                }
+              }
             } : {})}
           />
           <footer className="ea-pagination">
             <span>{result.total} records</span>
             <div>
               <button disabled={page <= 1} onClick={() => setQuery({ page: String(page - 1) })}>Previous</button>
-              <span>Page {page} of {Math.max(1, Math.ceil(result.total / pageSize))}</span>
-              <button disabled={page * pageSize >= result.total} onClick={() => setQuery({ page: String(page + 1) })}>Next</button>
+              <span>Page {page} of {Math.max(1, Math.ceil(result.total / effectivePageSize))}</span>
+              <button disabled={page * effectivePageSize >= result.total} onClick={() => setQuery({ page: String(page + 1) })}>Next</button>
             </div>
           </footer>
         </>
@@ -414,9 +428,9 @@ export const RecordScreen = ({
     runEndpoint(method(request)).then(
       (saved) => {
         const savedId = saved?.[resource.primaryKey] ?? id
-        navigate(resource.operations.get && savedId !== undefined
-          ? `${basePath}/${resource.name}/${String(savedId)}`
-          : `${basePath}/${resource.name}`)
+        navigate(resource.operations.get && savedId !== undefined && savedId !== null
+          ? recordPath(basePath, resource.name, String(savedId))
+          : resourcePath(basePath, resource.name))
       },
       (error) => { setFailure(failureOf(error)); setSaving(false) }
     )
@@ -427,7 +441,7 @@ export const RecordScreen = ({
     if (!method) return
     setSaving(true)
     runEndpoint(method({ path: { id: coerceId(resource, id) } })).then(
-      () => navigate(`${basePath}/${resource.name}`),
+      () => navigate(resourcePath(basePath, resource.name)),
       (error) => { setFailure(failureOf(error)); setSaving(false); setDeleteOpen(false) }
     )
   }
@@ -466,7 +480,7 @@ export const RecordScreen = ({
   return (
     <section>
       <header className="ea-page-header">
-        <div><button className="ea-back" onClick={() => navigate(`${basePath}/${resource.name}`)}>← {resource.label}</button><h1>{title}</h1></div>
+        <div><button className="ea-back" onClick={() => navigate(resourcePath(basePath, resource.name))}>← {resource.label}</button><h1>{title}</h1></div>
         <div className="ea-actions">
           {mode === "detail" && Object.entries(resource.actions).map(([name, action]) =>
             capabilities?.[resource.name]?.actions?.[name] === false ? null : (
@@ -487,7 +501,7 @@ export const RecordScreen = ({
               </button>
             ))}
           {mode === "detail" && resource.operations.update && can(capabilities, resource.name, "update") && (
-            <button className="ea-button" onClick={() => navigate(`${basePath}/${resource.name}/${id}/edit`)}>Edit</button>
+            <button className="ea-button" onClick={() => navigate(editPath(basePath, resource.name, id!))}>Edit</button>
           )}
           {mode === "detail" && resource.operations.delete && can(capabilities, resource.name, "delete") && (
             <button className="ea-button danger" onClick={() => setDeleteOpen(true)}>Delete</button>

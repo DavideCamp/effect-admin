@@ -38,6 +38,18 @@ export interface AdminActionDef extends AdminActionConfig {
   readonly fields: ReadonlyArray<FieldMeta>
 }
 
+/**
+ * Decoded model field keys accepted by resource configuration.
+ *
+ * Runtime metadata remains string-based because it is derived from Schema AST,
+ * but public config should catch simple typos such as `"full_name"` when the
+ * decoded model key is `fullName`.
+ */
+export type AdminFieldName<S extends Schema.Schema.AnyNoContext> =
+  Schema.Schema.Type<S> extends Readonly<Record<string, unknown>>
+    ? Extract<keyof Schema.Schema.Type<S>, string>
+    : string
+
 export interface AdminResourceConfig<
   S extends Schema.Schema.AnyNoContext,
   Group extends AdminApiGroup = AdminApiGroup
@@ -46,9 +58,9 @@ export interface AdminResourceConfig<
   readonly apiGroup: Group
   readonly name?: string
   readonly label?: string
-  readonly primaryKey?: string
-  readonly list?: { readonly columns?: ReadonlyArray<string> }
-  readonly fields?: Readonly<Record<string, AdminFieldConfig>>
+  readonly primaryKey?: AdminFieldName<S>
+  readonly list?: { readonly columns?: ReadonlyArray<AdminFieldName<S>> }
+  readonly fields?: Partial<Record<AdminFieldName<S>, AdminFieldConfig>>
   readonly operations?: Partial<Record<ConventionalOperation, string | false>>
   readonly actions?: Readonly<Record<string, AdminActionConfig>>
 }
@@ -64,7 +76,7 @@ export interface AdminResourceDef<
   readonly groupName: string
   readonly primaryKey: string
   readonly fields: ReadonlyArray<FieldMeta>
-  readonly fieldConfig: Readonly<Record<string, AdminFieldConfig>>
+  readonly fieldConfig: Readonly<Partial<Record<string, AdminFieldConfig>>>
   readonly listColumns: ReadonlyArray<string>
   readonly operations: Readonly<Partial<Record<ConventionalOperation, string>>>
   readonly actions: Readonly<Record<string, AdminActionDef>>
@@ -107,7 +119,11 @@ type EndpointWithPayload = {
   readonly payloadSchema?: Option.Option<Schema.Schema.Any>
 }
 
+const hasPayloadSchema = (value: unknown): value is EndpointWithPayload =>
+  typeof value === "object" && value !== null && "payloadSchema" in value
+
 const resolveOperations = (
+  resourceName: string,
   apiGroup: AdminApiGroup,
   overrides: AdminResourceConfig<Schema.Schema.AnyNoContext>["operations"]
 ): Readonly<Partial<Record<ConventionalOperation, string>>> => {
@@ -116,6 +132,12 @@ const resolveOperations = (
     const endpoint = overrides?.[operation]
     if (endpoint === false) continue
     const endpointName = endpoint ?? operation
+    if (endpoint !== undefined && !(endpointName in apiGroup.endpoints)) {
+      throw new Error(
+        `effect-admin: resource "${resourceName}" operation "${operation}" ` +
+        `references missing endpoint "${endpointName}"`
+      )
+    }
     if (endpointName in apiGroup.endpoints) operations[operation] = endpointName
   }
   return operations
@@ -128,13 +150,13 @@ const defineActions = (
 ): Readonly<Record<string, AdminActionDef>> => {
   const entries: Array<[string, AdminActionDef]> = []
   for (const [name, action] of Object.entries(actions)) {
-    const endpoint = apiGroup.endpoints[action.endpoint] as EndpointWithPayload | undefined
+    const endpoint = apiGroup.endpoints[action.endpoint]
     if (!endpoint) {
       throw new Error(
         `effect-admin: resource "${resourceName}" action references missing endpoint "${action.endpoint}"`
       )
     }
-    const payload = endpoint.payloadSchema
+    const payload = hasPayloadSchema(endpoint) && endpoint.payloadSchema
       ? Option.getOrUndefined(endpoint.payloadSchema)
       : undefined
     entries.push([name, {
@@ -172,6 +194,7 @@ export const defineAdminResource = <
 ): AdminResourceDef<S, Group> => {
   const name = config.name ?? config.apiGroup.identifier
   const fields = introspect(config.model.ast)
+  const fieldConfig: Readonly<Partial<Record<string, AdminFieldConfig>>> = config.fields ?? {}
   const names = new Set(fields.map((field) => field.name))
   const primaryKey = config.primaryKey ?? "id"
   if (!names.has(primaryKey)) {
@@ -179,7 +202,7 @@ export const defineAdminResource = <
   }
 
   const listColumns = config.list?.columns ?? fields
-    .filter((field) => !field.hidden && !config.fields?.[field.name]?.hidden)
+    .filter((field) => !field.hidden && !fieldConfig[field.name]?.hidden)
     .slice(0, 6)
     .map((field) => field.name)
   for (const field of listColumns) {
@@ -196,9 +219,9 @@ export const defineAdminResource = <
     groupName: config.apiGroup.identifier,
     primaryKey,
     fields,
-    fieldConfig: config.fields ?? {},
+    fieldConfig,
     listColumns,
-    operations: resolveOperations(config.apiGroup, config.operations),
+    operations: resolveOperations(name, config.apiGroup, config.operations),
     actions: defineActions(name, config.apiGroup, config.actions)
   }
 }
@@ -218,20 +241,25 @@ export const defineCrudResource = <
     path,
     idParam,
     idPath,
+    headers,
     create,
     update,
     extendApiGroup,
     ...resourceConfig
   } = config
-  const crudConfig: Record<string, unknown> = { model, name }
-  if (path !== undefined) crudConfig.path = path
-  if (idParam !== undefined) crudConfig.idParam = idParam
-  if (idPath !== undefined) crudConfig.idPath = idPath
-  const createSchema = create ?? deriveAdminCreateSchema(model)
-  crudConfig.create = createSchema
-  crudConfig.update = update ?? deriveAdminUpdateSchema(createSchema)
+  const createSchema = (create ?? deriveAdminCreateSchema(model)) as Create
+  const updateSchema = (update ?? deriveAdminUpdateSchema(createSchema)) as Update
 
-  const apiGroup = makeCrudApiGroup(crudConfig as unknown as AdminCrudApiConfig<Name, S, Create, Update>)
+  const apiGroup = makeCrudApiGroup({
+    model,
+    name,
+    create: createSchema,
+    update: updateSchema,
+    ...(path !== undefined ? { path } : {}),
+    ...(idParam !== undefined ? { idParam } : {}),
+    ...(idPath !== undefined ? { idPath } : {}),
+    ...(headers !== undefined ? { headers } : {})
+  })
   const finalApiGroup = extendApiGroup
     ? extendApiGroup(apiGroup)
     : apiGroup as unknown as Group
@@ -247,11 +275,16 @@ export const validateAdminResources = (
   resources: ReadonlyArray<AdminResourceDef>
 ): void => {
   const resourcesByName = new Map<string, AdminResourceDef>()
+  const resourcesByGroupName = new Map<string, AdminResourceDef>()
   for (const resource of resources) {
     if (resourcesByName.has(resource.name)) {
       throw new Error(`effect-admin: duplicate resource name "${resource.name}"`)
     }
+    if (resourcesByGroupName.has(resource.groupName)) {
+      throw new Error(`effect-admin: duplicate resource api group "${resource.groupName}"`)
+    }
     resourcesByName.set(resource.name, resource)
+    resourcesByGroupName.set(resource.groupName, resource)
   }
 
   for (const resource of resources) {

@@ -5,7 +5,7 @@ paginated results, capabilities, not-found errors, field validation errors, and
 conventional CRUD `HttpApiGroup` generation.
 
 ```bash
-pnpm add @effect-admin/contracts@0.1.1 effect@^3.21.4 @effect/platform@^0.96.2
+pnpm add @effect-admin/contracts@0.1.2 effect@^3.21.4 @effect/platform@^0.96.2
 ```
 
 The package exists so server and frontend packages in an Effect monorepo can
@@ -22,5 +22,9 @@ parallel contract.
 
 Capabilities only describe what controls the UI should offer. They are not an
 authorization layer.
+
+Generated CRUD groups can also declare typed request headers. This lets host
+handlers receive the same auth/session/tenant inputs that the React admin sends
+through `clientOptions.headers`, while keeping authorization server-owned.
 
 The `0.1.x` line targets Effect 3 `HttpApi`.

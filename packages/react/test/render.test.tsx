@@ -13,7 +13,11 @@ describe("EffectAdmin", () => {
     const html = renderToString(
       <EffectAdmin
         resources={[people]}
-        clientOptions={{ headers: { "x-admin-role": "staff" } }}
+        pageSize={50}
+        clientOptions={{
+          headers: { "x-admin-role": "staff" },
+          fetchOptions: { credentials: "include" }
+        }}
         client={{ people: { list: () => { throw new Error("not run during render") } } }}
       />
     )

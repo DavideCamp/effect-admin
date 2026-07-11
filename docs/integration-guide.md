@@ -21,8 +21,8 @@ live:
 
 ```bash
 pnpm --filter @your-org/app-contract add \
-  @effect-admin/core@0.1.1 \
-  @effect-admin/contracts@0.1.1 \
+  @effect-admin/core@0.1.2 \
+  @effect-admin/contracts@0.1.2 \
   @effect-admin/annotations@0.1.1 \
   effect@^3.21.4 \
   @effect/platform@^0.96.2
@@ -32,7 +32,7 @@ Install the React package in the frontend application:
 
 ```bash
 pnpm --filter @your-org/web add \
-  @effect-admin/react@0.1.1 \
+  @effect-admin/react@0.1.2 \
   effect@^3.21.4 \
   @effect/platform@^0.96.2 \
   react \
@@ -41,6 +41,12 @@ pnpm --filter @your-org/web add \
 
 Use exact package versions while the API is alpha. The `alpha` dist-tag is fine
 for experiments, but exact versions make real app upgrades easier to review.
+
+Current alpha packages can also be installed with:
+
+```bash
+pnpm add @effect-admin/react@alpha @effect-admin/core@alpha @effect-admin/contracts@alpha
+```
 
 ## Recommended monorepo shape
 
@@ -89,6 +95,15 @@ export const AppApi = makeAdminApi("app", resources, { prefix: "/api" })
 `defineCrudResource` creates the conventional `HttpApiGroup` and derives create
 / update payloads from the model. Fields marked `auto`, `readOnly`, `hidden`,
 or `sensitive` are omitted from the generated create payload.
+
+Resource config uses decoded model keys. If the wire field is
+`full_name` via `Schema.fromKey("full_name")`, the admin config key is
+`fullName`. TypeScript checks `primaryKey`, `list.columns`, and `fields`
+against those decoded keys.
+
+If you explicitly map an operation to a non-conventional endpoint name, the
+endpoint must exist. effect-admin fails at resource definition time instead of
+silently hiding a misconfigured operation.
 
 ## Implement handlers in the host server
 
@@ -201,13 +216,15 @@ const clientOptions = useMemo(() => ({
   headers: () => ({
     "x-admin-role": currentRole,
     "x-tenant-id": currentTenantId
-  })
+  }),
+  fetchOptions: { credentials: "include" }
 }), [currentRole, currentTenantId])
 
 <EffectAdmin
   api={AppApi}
   resources={resources}
   basePath="/admin"
+  pageSize={50}
   clientOptions={clientOptions}
 />
 ```
@@ -216,6 +233,8 @@ Header functions are evaluated when requests are sent, so they can read current
 session state as long as the closure is kept up to date by the host app.
 Memoize the `clientOptions` object when its values depend on React state, so
 the generated client is recreated only when those values actually change.
+`fetchOptions` is passed to the underlying fetch client; use it for
+cookie-backed sessions, for example `{ credentials: "include" }`.
 
 If the backend expects typed headers in handlers, declare them on the resource
 contract:
@@ -234,6 +253,13 @@ export const users = defineCrudResource({
 
 The host server must still authorize every handler. Headers and capabilities
 are inputs to your policy, not a replacement for it.
+
+Recommended production policy:
+
+- derive capabilities from the authenticated server-side session;
+- send the same auth/session/tenant headers through `clientOptions.headers`;
+- use capabilities only to hide UI controls;
+- enforce the same policy again inside every `HttpApiBuilder` handler.
 
 ## Custom client escape hatch
 
@@ -331,6 +357,8 @@ Before exposing the admin in production:
   the app;
 - mark generated, read-only, hidden, and sensitive fields with `AdminField`;
 - keep audit logging and business invariants in host code.
+- smoke test the published npm package in one external app before promoting the
+  npm `latest` dist-tag.
 
 ## Current limitation
 

@@ -1,6 +1,7 @@
 import { AdminField } from "@effect-admin/annotations"
 import { HttpApiEndpoint, HttpApiGroup } from "@effect/platform"
 import { Schema } from "effect"
+import * as Option from "effect/Option"
 import { describe, expect, it } from "vitest"
 import { introspect } from "../src/introspect.js"
 import {
@@ -115,8 +116,13 @@ describe("defineAdminResource", () => {
     expect(() => defineAdminResource({
       model: Model,
       apiGroup: Api,
-      list: { columns: ["missing"] }
+      list: { columns: ["missing" as never] }
     })).toThrow(/no list field/)
+    expect(() => defineAdminResource({
+      model: Model,
+      apiGroup: Api,
+      operations: { create: "missing" }
+    })).toThrow(/operation "create" references missing endpoint/)
     expect(() => defineAdminResource({
       model: Model,
       apiGroup: Api,
@@ -155,9 +161,11 @@ describe("defineAdminResource", () => {
     const PostsApi = HttpApiGroup.make("posts").add(HttpApiEndpoint.get("list", "/posts"))
     const users = defineAdminResource({ model: User, apiGroup: UsersApi })
     const otherUsers = defineAdminResource({ model: User, apiGroup: UsersApi })
+    const usersAlias = defineAdminResource({ name: "usersAlias", model: User, apiGroup: UsersApi })
     const posts = defineAdminResource({ model: Post, apiGroup: PostsApi })
 
     expect(() => validateAdminResources([users, otherUsers])).toThrow(/duplicate resource/)
+    expect(() => validateAdminResources([users, usersAlias])).toThrow(/duplicate resource api group/)
     expect(() => validateAdminResources([posts])).toThrow(/missing relation resource/)
     expect(() => validateAdminResources([posts, users])).toThrow(/missing display field/)
   })
@@ -177,6 +185,46 @@ describe("defineAdminResource", () => {
       delete: "delete"
     })
     expect(Object.keys(AppApi.groups)).toEqual(["people"])
+  })
+
+  it("passes typed headers through generated CRUD resources", () => {
+    const AdminHeaders = Schema.Struct({ "x-admin-role": Schema.String })
+    const people = defineCrudResource({
+      name: "people",
+      model: Model,
+      headers: AdminHeaders
+    })
+
+    expect(Object.values(people.apiGroup.endpoints).every((endpoint) =>
+      Option.isSome(endpoint.headersSchema)
+    )).toBe(true)
+  })
+
+  it("types resource config fields against decoded model keys", () => {
+    const User = Schema.Struct({
+      id: Schema.Int,
+      fullName: Schema.propertySignature(Schema.String).pipe(Schema.fromKey("full_name")),
+      email: Schema.String
+    })
+
+    defineCrudResource({
+      name: "users",
+      model: User,
+      primaryKey: "id",
+      list: { columns: ["id", "fullName", "email"] },
+      fields: { fullName: { widget: "text" } }
+    })
+
+    if (false) {
+      defineCrudResource({
+        name: "invalid-users",
+        model: User,
+        list: {
+          // @ts-expect-error resource config uses decoded keys, not encoded wire keys
+          columns: ["full_name"]
+        }
+      })
+    }
   })
 
   it("derives admin create and update payload schemas from the model", async () => {

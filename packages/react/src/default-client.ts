@@ -9,6 +9,12 @@ import type { AdminClient } from "./client.js"
 
 export interface EffectAdminClientOptions {
   readonly headers?: Headers.Input | (() => Headers.Input) | undefined
+  /**
+   * Extra options for the underlying fetch implementation. Use this for
+   * production cases such as cookie-backed sessions:
+   * `{ credentials: "include" }`.
+   */
+  readonly fetchOptions?: RequestInit | undefined
   readonly transformClient?: ((client: HttpClient.HttpClient) => HttpClient.HttpClient) | undefined
   readonly transformResponse?:
     | ((effect: Effect.Effect<unknown, unknown>) => Effect.Effect<unknown, unknown>)
@@ -42,6 +48,9 @@ export const makeDefaultAdminClient = (
       transformClient: withClientOptions(options),
       transformResponse: options.transformResponse
     }).pipe(
-      Effect.provide(FetchHttpClient.layer)
+      Effect.provide(FetchHttpClient.layer),
+      options.fetchOptions
+        ? Effect.provideService(FetchHttpClient.RequestInit, options.fetchOptions)
+        : (effect) => effect
     ) as Effect.Effect<AdminClient, never, never>
   )

@@ -12,6 +12,7 @@ export {
   type AdminActionDef,
   type AdminCrudResourceConfig,
   type AdminFieldConfig,
+  type AdminFieldName,
   type AdminResourceConfig,
   type AdminResourceDef,
   type ConventionalOperation
