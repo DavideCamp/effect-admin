@@ -1,5 +1,6 @@
 import { AdminCapabilities } from "@effect-admin/contracts"
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 import { StrictMode, useCallback, useMemo, useState } from "react"
 import { createRoot } from "react-dom/client"
@@ -48,6 +49,7 @@ const ExampleApp = () => {
         resources={resources}
         basePath="/admin"
         clientOptions={clientOptions}
+        makeClient={makeEffect3AdminClient}
         loadCapabilities={loadCapabilities}
       />
     </>

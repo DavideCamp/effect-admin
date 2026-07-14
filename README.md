@@ -11,7 +11,7 @@ actions, and capability-aware controls.
 The core value proposition is deliberately narrow:
 
 ```tsx
-<EffectAdmin api={AppApi} resources={resources} />
+<EffectAdmin api={AppApi} resources={resources} makeClient={adapter} />
 ```
 
 If your application is an Effect monorepo with a React or Next.js frontend,
@@ -213,11 +213,12 @@ Mount the admin in React, Vite, Next.js, or any React host.
 ```tsx
 // apps/web/src/AdminApp.tsx
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 import { AppApi, resources } from "@your-org/app-contract/admin"
 
 export function AdminApp() {
-  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" makeClient={makeEffect3AdminClient} />
 }
 ```
 
@@ -296,6 +297,7 @@ The public React contract for the 0.1.x line is intentionally small:
   basePath="/admin"
   pageSize={50}
   baseUrl=""
+  makeClient={makeEffect3AdminClient}
   clientOptions={{
     headers: () => ({ authorization: `Bearer ${token}` }),
     fetchOptions: { credentials: "include" }
@@ -308,8 +310,9 @@ The public React contract for the 0.1.x line is intentionally small:
 />
 ```
 
-Use `api` for the generated Effect 3 `HttpApiClient`. With Effect 4, pass
-`makeClient={makeEffect4AdminClient}` as well. Use `client` only when the host
+Use `api` with the adapter for your Effect version. Import
+`makeEffect3AdminClient` from `@effect-admin/react/effect3`; with Effect 4,
+pass `makeEffect4AdminClient` from `@effect-admin/effect4`. Use `client` only when the host
 application needs a completely custom transport/runtime. Use `components` to
 replace default UI slots without forking the admin behavior.
 
@@ -317,6 +320,7 @@ replace default UI slots without forking the admin behavior.
 
 ```tsx
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 import { AppApi, resources } from "./admin"
 
@@ -326,6 +330,7 @@ export function AdminApp() {
       api={AppApi}
       resources={resources}
       basePath="/admin"
+      makeClient={makeEffect3AdminClient}
     />
   )
 }
@@ -346,6 +351,7 @@ const clientOptions = useMemo(() => ({
   resources={resources}
   basePath="/admin"
   clientOptions={clientOptions}
+  makeClient={makeEffect3AdminClient}
 />
 ```
 
@@ -365,10 +371,11 @@ Mount it in a catch-all Client Component so deep links survive refreshes:
 "use client"
 
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 
 export default function AdminPage() {
-  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" makeClient={makeEffect3AdminClient} />
 }
 ```
 
@@ -385,6 +392,7 @@ Every slot has a default. Override only the pieces your application owns:
 <EffectAdmin
   api={AppApi}
   resources={resources}
+  makeClient={makeEffect3AdminClient}
   components={{
     Layout: MyLayout,
     TextInput: MyTextInput,
@@ -492,6 +500,7 @@ import * as Schema from "effect/Schema"
 <EffectAdmin
   api={AppApi}
   resources={resources}
+  makeClient={makeEffect3AdminClient}
   loadCapabilities={async () => {
     const response = await fetch("/api/admin/capabilities")
     return Schema.decodeUnknownPromise(AdminCapabilities)(await response.json())

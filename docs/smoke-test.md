@@ -22,10 +22,13 @@ pnpm add @effect-admin/react@0.1.4 @effect-admin/core@0.1.4 @effect-admin/contra
 Mount the admin with the generated client:
 
 ```tsx
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
+
 <EffectAdmin
   api={AppApi}
   resources={resources}
   basePath="/admin"
+  makeClient={makeEffect3AdminClient}
 />
 ```
 
@@ -47,6 +50,7 @@ Add the production auth mechanism:
     headers: () => ({ authorization: `Bearer ${token}` }),
     fetchOptions: { credentials: "include" }
   }}
+  makeClient={makeEffect3AdminClient}
 />
 ```
 

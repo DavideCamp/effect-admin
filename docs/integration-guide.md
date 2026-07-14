@@ -134,11 +134,12 @@ middleware/layers.
 ```tsx
 // apps/web/src/AdminApp.tsx
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 import { AppApi, resources } from "@your-org/app-contract/admin"
 
 export function AdminApp() {
-  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" makeClient={makeEffect3AdminClient} />
 }
 ```
 
@@ -154,11 +155,12 @@ Use a Client Component catch-all route:
 "use client"
 
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 import { AppApi, resources } from "@your-org/app-contract/admin"
 
 export default function AdminPage() {
-  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" makeClient={makeEffect3AdminClient} />
 }
 ```
 
@@ -189,6 +191,7 @@ Load and validate them in the frontend:
 ```tsx
 import { AdminCapabilities } from "@effect-admin/contracts"
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import * as Schema from "effect/Schema"
 
 const loadCapabilities = async () => {
@@ -202,14 +205,15 @@ const loadCapabilities = async () => {
   resources={resources}
   basePath="/admin"
   loadCapabilities={loadCapabilities}
+  makeClient={makeEffect3AdminClient}
 />
 ```
 
 ## Generated client options for auth, cookies, tenant headers, or tracing
 
-`EffectAdmin` creates a default fetch-based `HttpApiClient` when you pass `api`.
-For simple production needs such as session, tenant, role, CSRF, or tracing
-headers, keep the generated client and pass `clientOptions`.
+The Effect 3 adapter creates a fetch-based `HttpApiClient` when you pass `api`
+and `makeClient={makeEffect3AdminClient}`. For simple production needs such as
+session, tenant, role, CSRF, or tracing headers, pass `clientOptions`.
 
 ```tsx
 const clientOptions = useMemo(() => ({
@@ -226,6 +230,7 @@ const clientOptions = useMemo(() => ({
   basePath="/admin"
   pageSize={50}
   clientOptions={clientOptions}
+  makeClient={makeEffect3AdminClient}
 />
 ```
 

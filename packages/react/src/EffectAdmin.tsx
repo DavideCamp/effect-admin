@@ -7,7 +7,6 @@ import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import type { AdminClient } from "./client.js"
 import { defaultComponents, type EffectAdminComponents } from "./components.js"
-import type { EffectAdminClientOptions } from "./default-client.js"
 import { ErrorState, failureOf, Loading, type Failure } from "./internal.js"
 import { matchAdminRoute, useAdminLocation } from "./router.js"
 import { Home, ListScreen, RecordScreen } from "./screens.js"
@@ -16,12 +15,12 @@ export interface AdminClientFactoryOptions {
   readonly baseUrl?: string | undefined
 }
 
-export type AdminClientFactory<Api, Options = EffectAdminClientOptions> = (
+export type AdminClientFactory<Api, Options = object> = (
   api: Api,
   options: Options & AdminClientFactoryOptions
 ) => Promise<AdminClient>
 
-export interface EffectAdminProps<Api = unknown, ClientOptions = EffectAdminClientOptions> {
+export interface EffectAdminProps<Api = unknown, ClientOptions = object> {
   readonly api?: Api
   readonly resources: ReadonlyArray<AdminResourceDef>
   readonly basePath?: string | undefined
@@ -65,36 +64,7 @@ const resourceKey = (resources: ReadonlyArray<AdminResourceDef>): string =>
     ).join(",")
   ].join("|")).join("||")
 
-const clientOptionsKey = (options: EffectAdminClientOptions | undefined): string | undefined => {
-  if (!options) return undefined
-  if (
-    typeof options.headers === "function" ||
-    options.transformClient ||
-    options.transformResponse
-  ) return undefined
-  return JSON.stringify({
-    headers: options.headers,
-    fetchOptions: options.fetchOptions
-  })
-}
-
-const useStableClientOptions = (
-  options: EffectAdminClientOptions | undefined
-): EffectAdminClientOptions | undefined => {
-  const key = clientOptionsKey(options)
-  const ref = useRef<{
-    readonly key: string | undefined
-    readonly options: EffectAdminClientOptions | undefined
-  }>({ key, options })
-  if (key === undefined) {
-    ref.current = { key, options }
-  } else if (ref.current.key !== key) {
-    ref.current = { key, options }
-  }
-  return ref.current.options
-}
-
-export const EffectAdmin = <Api, ClientOptions = EffectAdminClientOptions>({
+export const EffectAdmin = <Api, ClientOptions = object>({
   api,
   resources,
   basePath = "/admin",
@@ -130,13 +100,6 @@ export const EffectAdmin = <Api, ClientOptions = EffectAdminClientOptions>({
   const [loadedCapabilities, setLoadedCapabilities] = useState<AdminCapabilities | undefined>()
   const [capabilitiesLoading, setCapabilitiesLoading] = useState(loadCapabilities !== undefined)
   const [failure, setFailure] = useState<Failure>()
-  const stableClientOptions = useStableClientOptions(
-    makeClient ? undefined : clientOptions as EffectAdminClientOptions | undefined
-  )
-  const effectiveClientOptions = makeClient
-    ? clientOptions
-    : stableClientOptions as ClientOptions | undefined
-
   useEffect(() => {
     if (providedClient) {
       setClient(providedClient)
@@ -147,15 +110,17 @@ export const EffectAdmin = <Api, ClientOptions = EffectAdminClientOptions>({
       setFailure({ message: "EffectAdmin requires either an HttpApi or a client." })
       return
     }
+    if (!makeClient) {
+      setFailure({
+        message: "EffectAdmin requires makeClient when api is provided. Import the adapter for your Effect version, or pass a client."
+      })
+      return
+    }
     let active = true
-    const loadClient = makeClient
-      ? makeClient(api, {
-        ...effectiveClientOptions,
-        baseUrl
-      } as ClientOptions & AdminClientFactoryOptions)
-      : import("./default-client.js").then(({ makeDefaultAdminClient }) =>
-        makeDefaultAdminClient(api, { ...stableClientOptions, baseUrl })
-      )
+    const loadClient = makeClient(api, {
+      ...(clientOptions as object),
+      baseUrl
+    } as ClientOptions & AdminClientFactoryOptions)
     loadClient.then(
       (value) => {
         if (active) {
@@ -166,7 +131,7 @@ export const EffectAdmin = <Api, ClientOptions = EffectAdminClientOptions>({
       (error) => { if (active) setFailure(failureOf(error)) }
     )
     return () => { active = false }
-  }, [api, baseUrl, effectiveClientOptions, makeClient, stableClientOptions, providedClient])
+  }, [api, baseUrl, clientOptions, makeClient, providedClient])
 
   useEffect(() => {
     if (!loadCapabilities) {

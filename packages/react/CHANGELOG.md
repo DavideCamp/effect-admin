@@ -1,5 +1,13 @@
 # @effect-admin/react
 
+## 0.1.6
+
+### Patch Changes
+
+- Keep the React renderer Effect-version-neutral and expose the Effect 3 client
+  adapter from `@effect-admin/react/effect3`. This prevents Effect 4 applications
+  from resolving and bundling the incompatible Effect 3 platform package.
+
 ## 0.1.5
 
 ### Patch Changes

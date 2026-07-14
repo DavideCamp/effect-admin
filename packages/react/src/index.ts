@@ -26,7 +26,3 @@ export type {
   FieldMeta,
   ResourceCapabilitiesValue
 } from "@effect-admin/shared"
-export type {
-  DefaultAdminClientOptions,
-  EffectAdminClientOptions
-} from "./default-client.js"

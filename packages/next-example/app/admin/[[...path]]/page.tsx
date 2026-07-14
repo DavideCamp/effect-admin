@@ -3,6 +3,7 @@
 import { AdminListParams, AdminListResult } from "@effect-admin/contracts"
 import { defineAdminResource } from "@effect-admin/core"
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import * as HttpApi from "@effect/platform/HttpApi"
 import * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
 import * as HttpApiGroup from "@effect/platform/HttpApiGroup"
@@ -18,5 +19,12 @@ const AppApi = HttpApi.make("next-fixture").add(PeopleApi).prefix("/api")
 const resources = [defineAdminResource({ model: Person, apiGroup: PeopleApi })]
 
 export default function AdminPage() {
-  return <EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+  return (
+    <EffectAdmin
+      api={AppApi}
+      resources={resources}
+      basePath="/admin"
+      makeClient={makeEffect3AdminClient}
+    />
+  )
 }

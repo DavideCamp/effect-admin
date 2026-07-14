@@ -25,7 +25,7 @@ The intended positioning is **minimal by default, custom where the host
 differs**. The default path should feel like:
 
 ```tsx
-<EffectAdmin api={AppApi} resources={resources} />
+<EffectAdmin api={AppApi} resources={resources} makeClient={adapter} />
 ```
 
 ## Current V1 scope

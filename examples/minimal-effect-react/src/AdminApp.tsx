@@ -1,5 +1,9 @@
 import { AdminCapabilities } from "@effect-admin/contracts"
-import { EffectAdmin, type EffectAdminClientOptions } from "@effect-admin/react"
+import { EffectAdmin } from "@effect-admin/react"
+import {
+  makeEffect3AdminClient,
+  type EffectAdminClientOptions
+} from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 import * as Schema from "effect/Schema"
 import { createRoot } from "react-dom/client"
@@ -32,6 +36,7 @@ function AdminApp() {
       resources={resources}
       basePath="/admin"
       clientOptions={clientOptions}
+      makeClient={makeEffect3AdminClient}
       loadCapabilities={loadCapabilities}
     />
   )

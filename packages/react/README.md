@@ -12,9 +12,15 @@ the default admin shell handle the boring CRUD screens:
 
 ```tsx
 import { EffectAdmin } from "@effect-admin/react"
+import { makeEffect3AdminClient } from "@effect-admin/react/effect3"
 import "@effect-admin/react/styles.css"
 
-<EffectAdmin api={AppApi} resources={resources} basePath="/admin" />
+<EffectAdmin
+  api={AppApi}
+  resources={resources}
+  basePath="/admin"
+  makeClient={makeEffect3AdminClient}
+/>
 ```
 
 The internal router is `basePath`-based and framework-neutral, so the same
@@ -27,6 +33,7 @@ Pass `components` to replace only the pieces your application owns:
 <EffectAdmin
   api={AppApi}
   resources={resources}
+  makeClient={makeEffect3AdminClient}
   components={{
     Layout: MyLayout,
     TextInput: MyTextInput,
@@ -52,6 +59,7 @@ const clientOptions = useMemo(() => ({
   api={AppApi}
   resources={resources}
   clientOptions={clientOptions}
+  makeClient={makeEffect3AdminClient}
 />
 ```
 
@@ -73,6 +81,8 @@ The stable 0.1.x integration surface is intentionally small:
 - `client` for a complete custom transport;
 - `components` for replacing the default layout, text input, or data table.
 
-Effect 3 `HttpApi` remains the default `api` integration. For Effect 4 beta,
-install `@effect-admin/effect4` and pass
-`makeClient={makeEffect4AdminClient}`.
+For Effect 3, import `makeEffect3AdminClient` from the isolated
+`@effect-admin/react/effect3` entrypoint. For Effect 4 beta, install
+`@effect-admin/effect4` and pass `makeClient={makeEffect4AdminClient}`. Keeping
+the adapters in separate entrypoints prevents one Effect major from being
+bundled into applications using the other.

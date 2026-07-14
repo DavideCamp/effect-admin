@@ -1,6 +1,6 @@
 {
   "name": "@effect-admin/react",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "type": "module",
   "description": "Plug-and-play React admin generated from Effect Schema and HttpApi",
   "keywords": [
@@ -19,6 +19,11 @@
       "development": "./src/index.ts",
       "default": "./dist/index.js"
     },
+    "./effect3": {
+      "types": "./src/effect3.ts",
+      "development": "./src/effect3.ts",
+      "default": "./dist/effect3.js"
+    },
     "./styles.css": {
       "development": "./src/styles.css",
       "default": "./dist/styles.css"
@@ -29,15 +34,9 @@
     "@radix-ui/react-dialog": "^1.1.15"
   },
   "peerDependencies": {
-    "@effect/platform": "^0.96.2",
     "effect": "^3.21.4 || >=4.0.0-beta.98 <5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
-  },
-  "peerDependenciesMeta": {
-    "@effect/platform": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@effect-admin/contracts": "workspace:*",
@@ -77,6 +76,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./effect3": {
+        "types": "./dist/effect3.d.ts",
+        "default": "./dist/effect3.js"
       },
       "./styles.css": "./dist/styles.css"
     }
