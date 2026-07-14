@@ -24,12 +24,12 @@ does not write directly to your database or create an identity system.
 
 ## Status
 
-`0.1.x` is the current alpha package line. Effect 3 remains supported by the
+`0.1.6` is the current public package release. Effect 3 remains supported by the
 existing packages, and Effect 4 beta is available through the dedicated
 `@effect-admin/effect4` adapter:
 
 ```bash
-pnpm add @effect-admin/react@alpha
+pnpm add @effect-admin/react@0.1.6
 ```
 
 The API is still alpha and not semver-stable. Use it for internal admin and
@@ -147,7 +147,7 @@ The safer option for a real app is pinning an exact version until the public
 API settles:
 
 ```bash
-pnpm add @effect-admin/react@0.1.4 @effect-admin/core@0.1.4 @effect-admin/contracts@0.1.4
+pnpm add @effect-admin/react@0.1.6 @effect-admin/core@0.1.5 @effect-admin/contracts@0.1.4
 ```
 
 For a fuller setup with capabilities, custom clients, Vite, and Next.js, see
@@ -601,11 +601,8 @@ until the API has survived real usage in another Effect application. The
 packages are independent community packages; they are not official Effect
 packages unless the Effect maintainers explicitly adopt them.
 
-Because `0.1.0` was the first published version, npm may still show it as
-`latest` while newer `0.1.x` releases are published under the `alpha` tag.
-Keep using the `alpha` tag until the API is intentionally promoted. Do not move
-the npm `latest` tag until the current alpha has passed a smoke test in a real
-external Effect app.
+`0.1.6` is published as both `latest` and `alpha`. The `alpha` tag remains
+available for smoke-test installations while the pre-1 API is still evolving.
 
 If npm returns `E403` with “Two-factor authentication ... is required”, publish
 with a fresh one-time password from your authenticator app:

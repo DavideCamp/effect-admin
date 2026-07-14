@@ -41,9 +41,9 @@ differs**. The default path should feel like:
 - server-side `makeCrudHandlers` to reduce conventional handler boilerplate
   without introducing a database adapter.
 
-The first public package line is `@effect-admin/*@0.1.0`. It targets Effect 3
-`HttpApi`; Effect 4 beta support should be treated as an explicit follow-up
-adapter instead of an implicit promise.
+The current public React package is `@effect-admin/react@0.1.6`. It targets
+Effect 3 `HttpApi`; Effect 4 beta support should be treated as an explicit
+follow-up adapter instead of an implicit promise.
 
 ## Explicit non-goals
 

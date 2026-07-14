@@ -21,7 +21,7 @@ live:
 
 ```bash
 pnpm --filter @your-org/app-contract add \
-  @effect-admin/core@0.1.4 \
+  @effect-admin/core@0.1.5 \
   @effect-admin/contracts@0.1.4 \
   @effect-admin/annotations@0.1.1 \
   effect@^3.21.4 \
@@ -32,7 +32,7 @@ Install the React package in the frontend application:
 
 ```bash
 pnpm --filter @your-org/web add \
-  @effect-admin/react@0.1.4 \
+  @effect-admin/react@0.1.6 \
   effect@^3.21.4 \
   @effect/platform@^0.96.2 \
   react \
