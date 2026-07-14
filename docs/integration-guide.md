@@ -360,8 +360,9 @@ Before exposing the admin in production:
 - smoke test the published npm package in one external app before promoting the
   npm `latest` dist-tag.
 
-## Current limitation
+## Effect 4 beta
 
-The `0.1.x` line targets Effect 3 and `@effect/platform` `HttpApi`. Effect 4
-beta / `effect/unstable/httpapi` should be handled as an explicit adapter or
-future release.
+The Effect 3 packages target `effect@^3.21.4` and `@effect/platform` HttpApi.
+For Effect 4 beta, use `@effect-admin/effect4` and pass
+`makeClient={makeEffect4AdminClient}` to `EffectAdmin`. The adapter targets
+`effect@>=4.0.0-beta.98 <5` and owns the unstable HttpApi compatibility layer.

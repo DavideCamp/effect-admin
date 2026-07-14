@@ -24,8 +24,9 @@ does not write directly to your database or create an identity system.
 
 ## Status
 
-`0.1.4` is the current alpha package line for `@effect-admin/core` and
-`@effect-admin/react`:
+`0.1.x` is the current alpha package line. Effect 3 remains supported by the
+existing packages, and Effect 4 beta is available through the dedicated
+`@effect-admin/effect4` adapter:
 
 ```bash
 pnpm add @effect-admin/react@alpha
@@ -47,24 +48,27 @@ The intended V1 shape is **minimal by default, custom when needed**:
 | Package | Purpose |
 | --- | --- |
 | `@effect-admin/annotations` | Minimal schema annotation symbol |
+| `@effect-admin/shared` | Effect-version-neutral resource and client interface |
 | `@effect-admin/contracts` | Standard list, typed errors, and CRUD `HttpApi` helpers |
 | `@effect-admin/core` | Decoded Schema AST → field metadata and resources |
+| `@effect-admin/effect4` | Effect 4 Schema, `effect/unstable/httpapi`, and client adapter |
 | `@effect-admin/react` | React application, default components and CSS |
 | `@effect-admin/example` | Runnable Vite frontend + host-owned `HttpApi` server |
 | `@effect-admin/next-example` | Build fixture for Next.js App Router consumption |
 
 ## Compatibility
 
-The published `0.1.x` line targets:
+The Effect 3 packages target:
 
 - `effect@^3.21.4`
 - `@effect/platform@^0.96.2`
 - `react@^19.1.0`
 - `react-dom@^19.1.0`
 
-Effect 4 beta / `effect/unstable/httpapi` is not supported yet. That should be
-a separate adapter or next minor release, not hidden inside the current
-Effect 3 contract.
+`@effect-admin/effect4` targets `effect@>=4.0.0-beta.98 <5` and imports HttpApi
+from `effect/unstable/httpapi`. `@effect-admin/react` accepts both majors; pass
+the Effect 4 client factory shown below. Because Effect 4 and HttpApi are still
+beta/unstable, adapter updates may be released as Effect changes.
 
 ## Install in an existing monorepo
 
@@ -90,6 +94,40 @@ pnpm --filter @your-org/web add \
 
 If the app already has compatible peer dependencies, you only need the
 `@effect-admin/*` packages in the relevant workspace.
+
+For an Effect 4 workspace, install the dedicated adapter instead of the Effect
+3 contract/core packages:
+
+```bash
+pnpm --filter @your-org/web add \
+  @effect-admin/effect4@alpha \
+  @effect-admin/react@alpha \
+  effect@beta \
+  react \
+  react-dom
+```
+
+```tsx
+import { Schema } from "effect"
+import {
+  defineCrudResource,
+  makeAdminApi,
+  makeEffect4AdminClient
+} from "@effect-admin/effect4"
+import { EffectAdmin } from "@effect-admin/react"
+
+const User = Schema.Struct({ id: Schema.Number, email: Schema.String })
+const users = defineCrudResource({ name: "users", model: User })
+const AppApi = makeAdminApi("app", [users], { prefix: "/api" })
+
+export const AdminApp = () => (
+  <EffectAdmin
+    api={AppApi}
+    resources={[users]}
+    makeClient={makeEffect4AdminClient}
+  />
+)
+```
 
 Suggested layout:
 
@@ -270,7 +308,8 @@ The public React contract for the 0.1.x line is intentionally small:
 />
 ```
 
-Use `api` for the generated `HttpApiClient`. Use `client` only when the host
+Use `api` for the generated Effect 3 `HttpApiClient`. With Effect 4, pass
+`makeClient={makeEffect4AdminClient}` as well. Use `client` only when the host
 application needs a completely custom transport/runtime. Use `components` to
 replace default UI slots without forking the admin behavior.
 

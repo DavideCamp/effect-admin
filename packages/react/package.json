@@ -1,6 +1,6 @@
 {
   "name": "@effect-admin/react",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "description": "Plug-and-play React admin generated from Effect Schema and HttpApi",
   "keywords": [
@@ -25,17 +25,23 @@
     }
   },
   "dependencies": {
-    "@effect-admin/contracts": "workspace:*",
-    "@effect-admin/core": "workspace:*",
+    "@effect-admin/shared": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.15"
   },
   "peerDependencies": {
     "@effect/platform": "^0.96.2",
-    "effect": "^3.21.4",
+    "effect": "^3.21.4 || >=4.0.0-beta.98 <5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
+  "peerDependenciesMeta": {
+    "@effect/platform": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@effect-admin/contracts": "workspace:*",
+    "@effect-admin/core": "workspace:*",
     "@effect/platform": "^0.96.2",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",

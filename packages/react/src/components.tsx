@@ -1,4 +1,4 @@
-import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
+import type { AdminResourceDef, FieldMeta } from "@effect-admin/shared"
 import type { ComponentType, ReactNode } from "react"
 import type { AdminRecord } from "./client.js"
 import { navigate, normalizeBasePath, resourcePath } from "./router.js"

@@ -42,5 +42,5 @@ in the host application.
 The package contains no React and no persistence code. effect-admin should
 describe the admin seam; the host application should still own the domain.
 
-The `0.1.x` line targets Effect 3 `HttpApi`. Effect 4 beta support should be a
-separate adapter/release.
+This package targets Effect 3 `HttpApi`. Effect 4 applications should use the
+dedicated `@effect-admin/effect4` adapter.

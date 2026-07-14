@@ -69,8 +69,10 @@ The stable 0.1.x integration surface is intentionally small:
 - `clientOptions` for headers and generated-client transforms;
 - `clientOptions.fetchOptions` for cookie-backed sessions, e.g.
   `{ credentials: "include" }`;
+- `makeClient` for a version-specific HttpApi client adapter;
 - `client` for a complete custom transport;
 - `components` for replacing the default layout, text input, or data table.
 
-The `0.1.x` line targets Effect 3 `HttpApi`. Effect 4 beta
-`effect/unstable/httpapi` will need a dedicated adapter/release.
+Effect 3 `HttpApi` remains the default `api` integration. For Effect 4 beta,
+install `@effect-admin/effect4` and pass
+`makeClient={makeEffect4AdminClient}`.

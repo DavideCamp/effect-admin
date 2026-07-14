@@ -1,8 +1,4 @@
-import {
-  makeAdminApi as makeHttpAdminApi,
-  makeCrudApiGroup,
-  type AdminCrudApiConfig
-} from "@effect-admin/contracts"
+import type { AdminFieldAnnotation } from "@effect-admin/annotations"
 import {
   type AdminActionConfig,
   type AdminActionDef,
@@ -12,39 +8,34 @@ import {
   type ConventionalOperation,
   type FieldMeta
 } from "@effect-admin/shared"
-import type * as HttpApi from "@effect/platform/HttpApi"
-import type * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
-import type * as HttpApiGroup from "@effect/platform/HttpApiGroup"
-import * as Option from "effect/Option"
-import * as Schema from "effect/Schema"
-import { introspect } from "./introspect.js"
-
-export { validateAdminResources } from "@effect-admin/shared"
+import { Schema, SchemaAST as AST } from "effect"
+import { HttpApi, HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+import {
+  makeAdminApi as makeHttpAdminApi,
+  makeCrudApiGroup,
+  type AdminCrudApiConfig
+} from "./contracts.js"
+import { introspect, resolveStruct } from "./introspect.js"
 
 const conventionalOperations = ["list", "get", "create", "update", "delete"] as const
 
+type AnyNoContext = Schema.Codec<unknown, unknown, never, never>
+
 type EndpointNames<Group extends AdminApiGroup> =
-  Group extends HttpApiGroup.HttpApiGroup.Any
-    ? HttpApiEndpoint.HttpApiEndpoint.Name<HttpApiGroup.HttpApiGroup.Endpoints<Group>>
+  Group extends HttpApiGroup.Constraint
+    ? HttpApiEndpoint.Identifier<HttpApiGroup.Endpoints<Group>>
     : Extract<keyof Group["endpoints"], string>
 
 type EndpointName<Group extends AdminApiGroup> =
   string extends EndpointNames<Group> ? string : EndpointNames<Group>
 
-/**
- * Decoded model field keys accepted by resource configuration.
- *
- * Runtime metadata remains string-based because it is derived from Schema AST,
- * but public config should catch simple typos such as `"full_name"` when the
- * decoded model key is `fullName`.
- */
-export type AdminFieldName<S extends Schema.Schema.AnyNoContext> =
-  Schema.Schema.Type<S> extends Readonly<Record<string, unknown>>
-    ? Extract<keyof Schema.Schema.Type<S>, string>
+export type AdminFieldName<S extends AnyNoContext> =
+  S["Type"] extends Readonly<Record<string, unknown>>
+    ? Extract<keyof S["Type"], string>
     : string
 
 export interface AdminResourceConfig<
-  S extends Schema.Schema.AnyNoContext,
+  S extends AnyNoContext,
   Group extends AdminApiGroup = AdminApiGroup
 > {
   readonly model: S
@@ -60,43 +51,28 @@ export interface AdminResourceConfig<
 
 type GeneratedCrudApiGroup<
   Name extends string,
-  S extends Schema.Schema.AnyNoContext,
-  Create extends Schema.Schema.AnyNoContext,
-  Update extends Schema.Schema.AnyNoContext
+  S extends AnyNoContext,
+  Create extends AnyNoContext,
+  Update extends AnyNoContext
 > = ReturnType<typeof makeCrudApiGroup<Name, S, Create, Update>>
 
 export type AdminCrudResourceConfig<
   Name extends string,
-  S extends Schema.Schema.AnyNoContext,
-  Create extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext,
-  Update extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext,
+  S extends AnyNoContext,
+  Create extends AnyNoContext = AnyNoContext,
+  Update extends AnyNoContext = AnyNoContext,
   Group extends AdminApiGroup = GeneratedCrudApiGroup<Name, S, Create, Update>
 > = Omit<AdminResourceConfig<S, AdminApiGroup>, "apiGroup" | "name"> &
   Omit<AdminCrudApiConfig<Name, S, Create, Update>, "create" | "update"> & {
-  /**
-   * Override the generated create payload. By default effect-admin derives it
-   * from the model, omitting admin-managed fields.
-   */
-  readonly create?: Create
-  /**
-   * Override the generated update payload. By default effect-admin uses
-   * `Schema.partial(create)`.
-   */
-  readonly update?: Update
-  readonly extendApiGroup?: (
-    apiGroup: GeneratedCrudApiGroup<Name, S, Create, Update>
-  ) => Group
-}
+    readonly create?: Create
+    readonly update?: Update
+    readonly extendApiGroup?: (
+      apiGroup: GeneratedCrudApiGroup<Name, S, Create, Update>
+    ) => Group
+  }
 
 const humanize = (value: string) =>
   value.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
-
-type EndpointWithPayload = {
-  readonly payloadSchema?: Option.Option<Schema.Schema.Any>
-}
-
-const hasPayloadSchema = (value: unknown): value is EndpointWithPayload =>
-  typeof value === "object" && value !== null && "payloadSchema" in value
 
 const resolveOperations = (
   resourceName: string,
@@ -127,14 +103,12 @@ const defineActions = (
   const entries: Array<[string, AdminActionDef]> = []
   for (const [name, action] of Object.entries(actions)) {
     const endpoint = apiGroup.endpoints[action.endpoint]
-    if (!endpoint) {
+    if (!HttpApiEndpoint.isHttpApiEndpoint(endpoint)) {
       throw new Error(
         `effect-admin: resource "${resourceName}" action references missing endpoint "${action.endpoint}"`
       )
     }
-    const payload = hasPayloadSchema(endpoint) && endpoint.payloadSchema
-      ? Option.getOrUndefined(endpoint.payloadSchema)
-      : undefined
+    const payload = Array.from(endpoint.payload.values())[0]?.schemas[0]
     entries.push([name, {
       ...action,
       fields: payload ? introspect(payload.ast) : []
@@ -143,31 +117,77 @@ const defineActions = (
   return Object.fromEntries(entries)
 }
 
-export const deriveAdminCreateSchema = <S extends Schema.Schema.AnyNoContext>(
-  model: S
-): Schema.Schema.AnyNoContext => {
-  const omittedFields = introspect(model.ast)
-    .filter((field) => field.auto || field.readOnly || field.hidden)
-    .map((field) => field.name)
+const mapEncoding = (
+  encoding: AST.Encoding | undefined,
+  transform: (ast: AST.AST) => AST.AST
+): AST.Encoding | undefined =>
+  encoding?.map((link) => new AST.Link(transform(link.to), link.transformation)) as
+    | AST.Encoding
+    | undefined
 
-  if (omittedFields.length === 0) return model
-  const omitFields = Schema.omit as unknown as (
-    ...keys: ReadonlyArray<string>
-  ) => (schema: Schema.Schema.AnyNoContext) => Schema.Schema.AnyNoContext
-  return omitFields(...omittedFields)(model)
+const rebuildObjects = (
+  ast: AST.Objects,
+  propertySignatures: ReadonlyArray<AST.PropertySignature>,
+  encoding: AST.Encoding | undefined
+): AST.Objects =>
+  new AST.Objects(
+    propertySignatures,
+    ast.indexSignatures,
+    ast.annotations,
+    ast.checks,
+    encoding,
+    ast.context,
+    ast.encodingChecks
+  )
+
+const selectProperties = (
+  ast: AST.AST,
+  indexes: ReadonlyArray<number>
+): AST.AST => {
+  if (!AST.isObjects(ast)) return ast
+  const properties = indexes.flatMap((index) => {
+    const property = ast.propertySignatures[index]
+    return property ? [property] : []
+  })
+  return rebuildObjects(
+    ast,
+    properties,
+    mapEncoding(ast.encoding, (target) => selectProperties(target, indexes))
+  )
 }
 
-export const deriveAdminUpdateSchema = <S extends Schema.Schema.AnyNoContext>(
-  create: S
-): Schema.Schema.AnyNoContext =>
-  Schema.partial(create)
+const optionalizeProperties = (ast: AST.AST): AST.AST => {
+  if (!AST.isObjects(ast)) return ast
+  return rebuildObjects(
+    ast,
+    ast.propertySignatures.map((property) =>
+      new AST.PropertySignature(property.name, AST.optionalKey(property.type))
+    ),
+    mapEncoding(ast.encoding, optionalizeProperties)
+  )
+}
+
+export const deriveAdminCreateSchema = <S extends AnyNoContext>(model: S): AnyNoContext => {
+  const struct = resolveStruct(model.ast)
+  const omitted = new Set(
+    introspect(model.ast)
+      .filter((field) => field.auto || field.readOnly || field.hidden)
+      .map((field) => field.name)
+  )
+  if (omitted.size === 0) return model
+  const indexes = struct.propertySignatures.flatMap((property, index) =>
+    omitted.has(String(property.name)) ? [] : [index]
+  )
+  return Schema.make(selectProperties(struct, indexes) as never) as AnyNoContext
+}
+
+export const deriveAdminUpdateSchema = <S extends AnyNoContext>(create: S): AnyNoContext =>
+  Schema.make(optionalizeProperties(resolveStruct(create.ast)) as never) as AnyNoContext
 
 export const defineAdminResource = <
-  S extends Schema.Schema.AnyNoContext,
+  S extends AnyNoContext,
   Group extends AdminApiGroup = AdminApiGroup
->(
-  config: AdminResourceConfig<S, Group>
-): AdminResourceDef<S, Group> => {
+>(config: AdminResourceConfig<S, Group>): AdminResourceDef<S, Group> => {
   const name = config.name ?? config.apiGroup.identifier
   const fields = introspect(config.model.ast)
   const fieldConfig: Readonly<Partial<Record<string, AdminFieldConfig>>> = config.fields ?? {}
@@ -204,19 +224,17 @@ export const defineAdminResource = <
 
 export const defineCrudResource = <
   const Name extends string,
-  S extends Schema.Schema.AnyNoContext,
-  Create extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext,
-  Update extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext,
+  S extends AnyNoContext,
+  Create extends AnyNoContext = AnyNoContext,
+  Update extends AnyNoContext = AnyNoContext,
   Group extends AdminApiGroup = GeneratedCrudApiGroup<Name, S, Create, Update>
->(
-  config: AdminCrudResourceConfig<Name, S, Create, Update, Group>
-): AdminResourceDef<S, Group> => {
+>(config: AdminCrudResourceConfig<Name, S, Create, Update, Group>): AdminResourceDef<S, Group> => {
   const {
     model,
     name,
     path,
     idParam,
-    idPath,
+    idParams,
     headers,
     create,
     update,
@@ -225,7 +243,6 @@ export const defineCrudResource = <
   } = config
   const createSchema = (create ?? deriveAdminCreateSchema(model)) as Create
   const updateSchema = (update ?? deriveAdminUpdateSchema(createSchema)) as Update
-
   const apiGroup = makeCrudApiGroup({
     model,
     name,
@@ -233,12 +250,10 @@ export const defineCrudResource = <
     update: updateSchema,
     ...(path !== undefined ? { path } : {}),
     ...(idParam !== undefined ? { idParam } : {}),
-    ...(idPath !== undefined ? { idPath } : {}),
+    ...(idParams !== undefined ? { idParams } : {}),
     ...(headers !== undefined ? { headers } : {})
   })
-  const finalApiGroup = extendApiGroup
-    ? extendApiGroup(apiGroup)
-    : apiGroup as unknown as Group
+  const finalApiGroup = extendApiGroup ? extendApiGroup(apiGroup) : apiGroup as unknown as Group
   return defineAdminResource({
     ...resourceConfig,
     model,
@@ -249,24 +264,19 @@ export const defineCrudResource = <
 
 export const makeAdminApi = <
   const Id extends string,
-  const Resources extends ReadonlyArray<AdminResourceDef<Schema.Schema.AnyNoContext, AdminApiGroup>>
+  const Resources extends ReadonlyArray<AdminResourceDef<AnyNoContext, AdminApiGroup>>
 >(
   identifier: Id,
   resources: Resources,
   options?: { readonly prefix?: `/${string}` }
 ): HttpApi.HttpApi<
   Id,
-  Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any,
-  HttpApiGroup.HttpApiGroup.Error<Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any>,
-  never
+  Resources[number]["apiGroup"] & HttpApiGroup.Constraint
 > =>
   makeHttpAdminApi(
     identifier,
-    resources.map((resource) => resource.apiGroup as unknown as HttpApiGroup.HttpApiGroup.Any),
+    resources.map((resource) => resource.apiGroup as HttpApiGroup.Constraint),
     options
-  ) as unknown as HttpApi.HttpApi<
-    Id,
-    Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any,
-    HttpApiGroup.HttpApiGroup.Error<Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any>,
-    never
-  >
+  ) as HttpApi.HttpApi<Id, Resources[number]["apiGroup"] & HttpApiGroup.Constraint>
+
+export type { AdminFieldAnnotation, FieldMeta }

@@ -11,7 +11,9 @@
     "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src"],
+  "exclude": [],
   "references": [
+    { "path": "../annotations/tsconfig.build.json" },
     { "path": "../shared/tsconfig.build.json" }
   ]
 }

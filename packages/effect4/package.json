@@ -1,13 +1,13 @@
 {
-  "name": "@effect-admin/core",
-  "version": "0.1.5",
+  "name": "@effect-admin/effect4",
+  "version": "0.1.0",
   "type": "module",
-  "description": "Effect Schema introspection, CRUD conventions, and admin resource definitions",
+  "description": "Effect 4 HttpApi adapter, resource definitions, and client integration for effect-admin",
   "keywords": [
     "effect",
     "effect-admin",
+    "effect4",
     "httpapi",
-    "schema",
     "admin"
   ],
   "exports": {
@@ -19,22 +19,20 @@
   },
   "dependencies": {
     "@effect-admin/annotations": "workspace:*",
-    "@effect-admin/contracts": "workspace:*",
     "@effect-admin/shared": "workspace:*"
   },
   "peerDependencies": {
-    "@effect/platform": "^0.96.2",
-    "effect": "^3.21.4"
+    "effect": ">=4.0.0-beta.98 <5"
   },
   "devDependencies": {
-    "@effect/platform": "^0.96.2",
-    "effect": "^3.21.4"
+    "effect": "4.0.0-beta.98",
+    "typescript": "^5.9.3"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/DavideCamp/effect-admin.git",
-    "directory": "packages/core"
+    "directory": "packages/effect4"
   },
   "homepage": "https://github.com/DavideCamp/effect-admin#readme",
   "bugs": {
@@ -45,6 +43,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc -b tsconfig.build.json --force",
+    "typecheck": "tsc -p tsconfig.test.json",
     "prepack": "pnpm build"
   },
   "publishConfig": {

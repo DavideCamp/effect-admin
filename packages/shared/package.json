@@ -1,14 +1,13 @@
 {
-  "name": "@effect-admin/core",
-  "version": "0.1.5",
+  "name": "@effect-admin/shared",
+  "version": "0.1.0",
   "type": "module",
-  "description": "Effect Schema introspection, CRUD conventions, and admin resource definitions",
+  "description": "Effect-version-neutral resource metadata shared by effect-admin adapters and renderers",
   "keywords": [
     "effect",
     "effect-admin",
-    "httpapi",
-    "schema",
-    "admin"
+    "admin",
+    "metadata"
   ],
   "exports": {
     ".": {
@@ -17,24 +16,11 @@
       "default": "./dist/index.js"
     }
   },
-  "dependencies": {
-    "@effect-admin/annotations": "workspace:*",
-    "@effect-admin/contracts": "workspace:*",
-    "@effect-admin/shared": "workspace:*"
-  },
-  "peerDependencies": {
-    "@effect/platform": "^0.96.2",
-    "effect": "^3.21.4"
-  },
-  "devDependencies": {
-    "@effect/platform": "^0.96.2",
-    "effect": "^3.21.4"
-  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/DavideCamp/effect-admin.git",
-    "directory": "packages/core"
+    "directory": "packages/shared"
   },
   "homepage": "https://github.com/DavideCamp/effect-admin#readme",
   "bugs": {

@@ -1,4 +1,9 @@
-export { EffectAdmin, type EffectAdminProps } from "./EffectAdmin.js"
+export {
+  EffectAdmin,
+  type AdminClientFactory,
+  type AdminClientFactoryOptions,
+  type EffectAdminProps
+} from "./EffectAdmin.js"
 export {
   DefaultDataTable,
   DefaultLayout,
@@ -12,8 +17,15 @@ export {
   type AdminClient,
   type AdminEndpoint,
   type AdminListResult,
-  type AdminRecord
+  type AdminRecord,
+  type AdminTask
 } from "./client.js"
+export type {
+  AdminCapabilitiesValue,
+  AdminResourceDef,
+  FieldMeta,
+  ResourceCapabilitiesValue
+} from "@effect-admin/shared"
 export type {
   DefaultAdminClientOptions,
   EffectAdminClientOptions

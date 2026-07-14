@@ -1,4 +1,4 @@
-import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
+import type { AdminResourceDef, FieldMeta } from "@effect-admin/shared"
 import { useEffect, useState } from "react"
 import { runEndpoint, type AdminClient, type AdminEndpoint, type AdminRecord } from "./client.js"
 import { coerceId, endpoint, failureOf, initialRecord, type Failure } from "./internal.js"
@@ -197,4 +197,3 @@ export const useAction = ({
     runAction
   }
 }
-

@@ -1,5 +1,4 @@
-import type { AdminFilter } from "@effect-admin/contracts"
-import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
+import type { AdminFilter, AdminResourceDef, FieldMeta } from "@effect-admin/shared"
 
 export const listFilterFields = (resource: AdminResourceDef): ReadonlyArray<FieldMeta> =>
   resource.fields.filter((field) =>
@@ -30,4 +29,3 @@ export const listFiltersFromQuery = (
       value: filterValue(field, raw)
     }]
   })
-

@@ -1,5 +1,8 @@
-import type { AdminCapabilities } from "@effect-admin/contracts"
-import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
+import type {
+  AdminCapabilitiesValue as AdminCapabilities,
+  AdminResourceDef,
+  FieldMeta
+} from "@effect-admin/shared"
 import * as Dialog from "@radix-ui/react-dialog"
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"

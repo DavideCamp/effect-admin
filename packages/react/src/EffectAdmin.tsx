@@ -1,6 +1,8 @@
-import type { AdminCapabilities } from "@effect-admin/contracts"
-import { validateAdminResources, type AdminResourceDef } from "@effect-admin/core"
-import type * as HttpApi from "@effect/platform/HttpApi"
+import {
+  validateAdminResources,
+  type AdminCapabilitiesValue as AdminCapabilities,
+  type AdminResourceDef
+} from "@effect-admin/shared"
 import { useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import type { AdminClient } from "./client.js"
@@ -10,13 +12,23 @@ import { ErrorState, failureOf, Loading, type Failure } from "./internal.js"
 import { matchAdminRoute, useAdminLocation } from "./router.js"
 import { Home, ListScreen, RecordScreen } from "./screens.js"
 
-export interface EffectAdminProps {
-  readonly api?: HttpApi.HttpApi.Any
+export interface AdminClientFactoryOptions {
+  readonly baseUrl?: string | undefined
+}
+
+export type AdminClientFactory<Api, Options = EffectAdminClientOptions> = (
+  api: Api,
+  options: Options & AdminClientFactoryOptions
+) => Promise<AdminClient>
+
+export interface EffectAdminProps<Api = unknown, ClientOptions = EffectAdminClientOptions> {
+  readonly api?: Api
   readonly resources: ReadonlyArray<AdminResourceDef>
   readonly basePath?: string | undefined
   readonly baseUrl?: string | undefined
   readonly pageSize?: number | undefined
-  readonly clientOptions?: EffectAdminClientOptions | undefined
+  readonly clientOptions?: ClientOptions | undefined
+  readonly makeClient?: AdminClientFactory<Api, ClientOptions> | undefined
   readonly client?: AdminClient | undefined
   readonly capabilities?: AdminCapabilities | undefined
   readonly loadCapabilities?: (() => AdminCapabilities | PromiseLike<AdminCapabilities>) | undefined
@@ -82,18 +94,19 @@ const useStableClientOptions = (
   return ref.current.options
 }
 
-export const EffectAdmin = ({
+export const EffectAdmin = <Api, ClientOptions = EffectAdminClientOptions>({
   api,
   resources,
   basePath = "/admin",
   baseUrl = "",
   pageSize = 25,
   clientOptions,
+  makeClient,
   client: providedClient,
   capabilities,
   loadCapabilities,
   components
-}: EffectAdminProps) => {
+}: EffectAdminProps<Api, ClientOptions>) => {
   const resourcesKey = resourceKey(resources)
   const validationRef = useRef<{ readonly key: string; readonly value: ResourceValidation } | undefined>(undefined)
   if (validationRef.current?.key !== resourcesKey) {
@@ -117,7 +130,12 @@ export const EffectAdmin = ({
   const [loadedCapabilities, setLoadedCapabilities] = useState<AdminCapabilities | undefined>()
   const [capabilitiesLoading, setCapabilitiesLoading] = useState(loadCapabilities !== undefined)
   const [failure, setFailure] = useState<Failure>()
-  const stableClientOptions = useStableClientOptions(clientOptions)
+  const stableClientOptions = useStableClientOptions(
+    makeClient ? undefined : clientOptions as EffectAdminClientOptions | undefined
+  )
+  const effectiveClientOptions = makeClient
+    ? clientOptions
+    : stableClientOptions as ClientOptions | undefined
 
   useEffect(() => {
     if (providedClient) {
@@ -130,9 +148,15 @@ export const EffectAdmin = ({
       return
     }
     let active = true
-    import("./default-client.js").then(({ makeDefaultAdminClient }) =>
-      makeDefaultAdminClient(api, { ...stableClientOptions, baseUrl })
-    ).then(
+    const loadClient = makeClient
+      ? makeClient(api, {
+        ...effectiveClientOptions,
+        baseUrl
+      } as ClientOptions & AdminClientFactoryOptions)
+      : import("./default-client.js").then(({ makeDefaultAdminClient }) =>
+        makeDefaultAdminClient(api, { ...stableClientOptions, baseUrl })
+      )
+    loadClient.then(
       (value) => {
         if (active) {
           setClient(value)
@@ -142,7 +166,7 @@ export const EffectAdmin = ({
       (error) => { if (active) setFailure(failureOf(error)) }
     )
     return () => { active = false }
-  }, [api, baseUrl, stableClientOptions, providedClient])
+  }, [api, baseUrl, effectiveClientOptions, makeClient, stableClientOptions, providedClient])
 
   useEffect(() => {
     if (!loadCapabilities) {

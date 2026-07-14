@@ -1,5 +1,11 @@
 # @effect-admin/react
 
+## 0.1.5
+
+### Patch Changes
+
+- Add the version-neutral shared resource and client contract, publish the Effect 4 adapter, and let the React package consume clients from either supported Effect generation.
+
 ## 0.1.4
 
 ### Patch Changes

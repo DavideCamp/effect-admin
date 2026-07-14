@@ -27,4 +27,5 @@ Generated CRUD groups can also declare typed request headers. This lets host
 handlers receive the same auth/session/tenant inputs that the React admin sends
 through `clientOptions.headers`, while keeping authorization server-owned.
 
-The `0.1.x` line targets Effect 3 `HttpApi`.
+This package targets Effect 3 `HttpApi`. Effect 4 applications should import
+the equivalent contracts from `@effect-admin/effect4`.

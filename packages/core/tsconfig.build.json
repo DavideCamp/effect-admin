@@ -13,6 +13,7 @@
   "include": ["src"],
   "references": [
     { "path": "../annotations/tsconfig.build.json" },
-    { "path": "../contracts/tsconfig.build.json" }
+    { "path": "../contracts/tsconfig.build.json" },
+    { "path": "../shared/tsconfig.build.json" }
   ]
 }

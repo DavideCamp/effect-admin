@@ -39,7 +39,7 @@ const withClientOptions = (options: EffectAdminClientOptions | undefined) =>
 
 /** Loaded lazily so applications that inject a client do not bundle it. */
 export const makeDefaultAdminClient = (
-  api: HttpApi.HttpApi.Any,
+  api: unknown,
   options: DefaultAdminClientOptions = {}
 ): Promise<AdminClient> =>
   Effect.runPromise(

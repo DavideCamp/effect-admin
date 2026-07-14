@@ -39,7 +39,7 @@
 
 ## Next production-hardening work
 
-- Effect 4 beta / `effect/unstable/httpapi` adapter or compatibility story
+- External smoke test for the Effect 4 beta adapter on each supported beta bump
 - One real host-app integration smoke test, separate from the package examples
 - Accessibility smoke checklist for keyboard navigation in the default UI
 

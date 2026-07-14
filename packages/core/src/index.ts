@@ -1,4 +1,5 @@
 export { AdminField, type AdminFieldAnnotation } from "@effect-admin/annotations"
+export { validateAdminResources } from "@effect-admin/shared"
 export { introspect, resolveStruct } from "./introspect.js"
 export {
   deriveAdminCreateSchema,
@@ -6,16 +7,9 @@ export {
   defineAdminResource,
   defineCrudResource,
   makeAdminApi,
-  validateAdminResources,
-  type AdminApiGroup,
-  type AdminActionConfig,
-  type AdminActionDef,
   type AdminCrudResourceConfig,
-  type AdminFieldConfig,
   type AdminFieldName,
-  type AdminResourceConfig,
-  type AdminResourceDef,
-  type ConventionalOperation
+  type AdminResourceConfig
 } from "./resource.js"
 export {
   makeCrudHandlers,
@@ -29,3 +23,11 @@ export {
   type AdminUpdateRequest
 } from "./server.js"
 export { type FieldKind, type FieldMeta } from "./types.js"
+export type {
+  AdminActionConfig,
+  AdminActionDef,
+  AdminApiGroup,
+  AdminFieldConfig,
+  AdminResourceDef,
+  ConventionalOperation
+} from "@effect-admin/shared"

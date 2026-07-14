@@ -1,5 +1,4 @@
-import type { AdminCapabilities } from "@effect-admin/contracts"
-import type { AdminResourceDef } from "@effect-admin/core"
+import type { AdminCapabilitiesValue as AdminCapabilities, AdminResourceDef } from "@effect-admin/shared"
 import type { AdminClient, AdminEndpoint, AdminRecord } from "./client.js"
 
 export interface Failure {
