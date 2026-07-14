@@ -22,9 +22,12 @@ const MACHINE_TITLES: ReadonlySet<string> = new Set([
   "DateFromSelf"
 ])
 
-const getTitle = (annotated: AST.Annotated): Option.Option<string> =>
+const getTitle = (
+  annotated: AST.Annotated,
+  options: { readonly ignoreMachineTitles: boolean }
+): Option.Option<string> =>
   AST.getAnnotation<string>(AST.TitleAnnotationId)(annotated).pipe(
-    Option.filter((t) => !MACHINE_TITLES.has(t))
+    Option.filter((t) => !options.ignoreMachineTitles || !MACHINE_TITLES.has(t))
   )
 
 const getAdminField = (annotated: AST.Annotated): Option.Option<AdminFieldAnnotation> =>
@@ -172,8 +175,8 @@ export const introspect = (ast: AST.AST): ReadonlyArray<FieldMeta> => {
     const name = String(sig.name)
     // Annotations may live on the property signature or on the field type:
     // check the signature first, then the type.
-    const title = getTitle(sig).pipe(
-      Option.orElse(() => getTitle(sig.type)),
+    const title = getTitle(sig, { ignoreMachineTitles: false }).pipe(
+      Option.orElse(() => getTitle(sig.type, { ignoreMachineTitles: true })),
       Option.getOrElse(() => name)
     )
     const admin = getAdminField(sig).pipe(

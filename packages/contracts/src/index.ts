@@ -142,10 +142,15 @@ export const makeAdminApi = <
   identifier: Id,
   groups: Groups,
   options?: { readonly prefix?: `/${string}` }
-): HttpApi.HttpApi<Id, Groups[number], any, never> => {
+): HttpApi.HttpApi<Id, Groups[number], HttpApiGroup.HttpApiGroup.Error<Groups[number]>, never> => {
   let api = HttpApi.make(identifier) as unknown as HttpApi.HttpApi.AnyWithProps
   for (const group of groups) {
     api = api.add(group) as unknown as HttpApi.HttpApi.AnyWithProps
   }
-  return (options?.prefix ? api.prefix(options.prefix) : api) as unknown as HttpApi.HttpApi<Id, Groups[number], any, never>
+  return (options?.prefix ? api.prefix(options.prefix) : api) as unknown as HttpApi.HttpApi<
+    Id,
+    Groups[number],
+    HttpApiGroup.HttpApiGroup.Error<Groups[number]>,
+    never
+  >
 }

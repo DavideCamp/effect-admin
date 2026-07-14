@@ -24,4 +24,20 @@ describe("EffectAdmin", () => {
     expect(html).toContain("Effect Admin")
     expect(html).toContain("People")
   })
+
+  it("renders resource configuration errors through the error state", () => {
+    const Person = Schema.Struct({ id: Schema.Int, name: Schema.String })
+    const PeopleApi = HttpApiGroup.make("people").add(HttpApiEndpoint.get("list", "/people"))
+    const people = defineAdminResource({ model: Person, apiGroup: PeopleApi })
+
+    const html = renderToString(
+      <EffectAdmin
+        resources={[people, people]}
+        client={{ people: { list: () => { throw new Error("not run during render") } } }}
+      />
+    )
+
+    expect(html).toContain("Something went wrong")
+    expect(html).toContain("duplicate resource name")
+  })
 })

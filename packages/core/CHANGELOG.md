@@ -1,5 +1,13 @@
 # @effect-admin/core
 
+## 0.1.4
+
+### Patch Changes
+
+- Harden admin resource writes, typed CRUD seams, list filtering, and React state handling.
+- Updated dependencies
+  - @effect-admin/contracts@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

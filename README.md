@@ -24,7 +24,7 @@ does not write directly to your database or create an identity system.
 
 ## Status
 
-`0.1.3` is the current alpha package line for `@effect-admin/core` and
+`0.1.4` is the current alpha package line for `@effect-admin/core` and
 `@effect-admin/react`:
 
 ```bash
@@ -109,7 +109,7 @@ The safer option for a real app is pinning an exact version until the public
 API settles:
 
 ```bash
-pnpm add @effect-admin/react@0.1.3 @effect-admin/core@0.1.3 @effect-admin/contracts@0.1.2
+pnpm add @effect-admin/react@0.1.4 @effect-admin/core@0.1.4 @effect-admin/contracts@0.1.4
 ```
 
 For a fuller setup with capabilities, custom clients, Vite, and Next.js, see

@@ -90,6 +90,18 @@ describe("introspect", () => {
     ])
   })
 
+  it("keeps user titles that match machine date titles on property signatures", () => {
+    const Model = Schema.Struct({
+      dateLabel: Schema.propertySignature(Schema.String).annotations({ title: "Date" }),
+      createdAt: Schema.Date
+    })
+
+    expect(introspect(Model.ast).map(({ name, title }) => ({ name, title }))).toEqual([
+      { name: "dateLabel", title: "Date" },
+      { name: "createdAt", title: "createdAt" }
+    ])
+  })
+
   it("rejects non-Struct schemas explicitly", () => {
     expect(() => introspect(Schema.String.ast)).toThrow(/Schema\.Struct/)
   })
@@ -121,12 +133,12 @@ describe("defineAdminResource", () => {
     expect(() => defineAdminResource({
       model: Model,
       apiGroup: Api,
-      operations: { create: "missing" }
+      operations: { create: "missing" as never }
     })).toThrow(/operation "create" references missing endpoint/)
     expect(() => defineAdminResource({
       model: Model,
       apiGroup: Api,
-      actions: { suspend: { endpoint: "missing" } }
+      actions: { suspend: { endpoint: "missing" as never } }
     })).toThrow(/missing endpoint/)
   })
 
@@ -241,10 +253,12 @@ describe("defineAdminResource", () => {
     const create = deriveAdminCreateSchema(User)
     await expect(Schema.decodeUnknownPromise(create)({
       full_name: "Ada Lovelace",
-      email: "ada@example.com"
+      email: "ada@example.com",
+      secret: "first-password"
     })).resolves.toEqual({
       fullName: "Ada Lovelace",
-      email: "ada@example.com"
+      email: "ada@example.com",
+      secret: "first-password"
     })
 
     await expect(Schema.decodeUnknownPromise(create)({
@@ -255,7 +269,8 @@ describe("defineAdminResource", () => {
       created_at: "2026-01-01T00:00:00.000Z"
     })).resolves.toEqual({
       fullName: "Ada Lovelace",
-      email: "ada@example.com"
+      email: "ada@example.com",
+      secret: "hidden"
     })
 
     const update = deriveAdminUpdateSchema(create)

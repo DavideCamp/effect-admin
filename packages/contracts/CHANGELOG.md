@@ -1,5 +1,11 @@
 # @effect-admin/contracts
 
+## 0.1.4
+
+### Patch Changes
+
+- Harden admin resource writes, typed CRUD seams, list filtering, and React state handling.
+
 ## 0.1.2
 
 ### Patch Changes

@@ -4,6 +4,7 @@ import {
   type AdminCrudApiConfig
 } from "@effect-admin/contracts"
 import type * as HttpApi from "@effect/platform/HttpApi"
+import type * as HttpApiEndpoint from "@effect/platform/HttpApiEndpoint"
 import type * as HttpApiGroup from "@effect/platform/HttpApiGroup"
 import * as Option from "effect/Option"
 import * as Schema from "effect/Schema"
@@ -15,9 +16,11 @@ export type ConventionalOperation = "list" | "get" | "create" | "update" | "dele
 const conventionalOperations = ["list", "get", "create", "update", "delete"] as const
 
 /** The small runtime surface effect-admin needs from an HttpApiGroup. */
-export interface AdminApiGroup {
+export interface AdminApiGroup<
+  Endpoints extends Readonly<Record<string, unknown>> = Readonly<Record<string, unknown>>
+> {
   readonly identifier: string
-  readonly endpoints: Readonly<Record<string, unknown>>
+  readonly endpoints: Endpoints
 }
 
 export interface AdminFieldConfig {
@@ -27,8 +30,16 @@ export interface AdminFieldConfig {
   readonly width?: number | string
 }
 
-export interface AdminActionConfig {
-  readonly endpoint: string
+type EndpointNames<Group extends AdminApiGroup> =
+  Group extends HttpApiGroup.HttpApiGroup.Any
+    ? HttpApiEndpoint.HttpApiEndpoint.Name<HttpApiGroup.HttpApiGroup.Endpoints<Group>>
+    : Extract<keyof Group["endpoints"], string>
+
+type EndpointName<Group extends AdminApiGroup> =
+  string extends EndpointNames<Group> ? string : EndpointNames<Group>
+
+export interface AdminActionConfig<Endpoint extends string = string> {
+  readonly endpoint: Endpoint
   readonly label?: string
   readonly confirm?: string
 }
@@ -61,8 +72,8 @@ export interface AdminResourceConfig<
   readonly primaryKey?: AdminFieldName<S>
   readonly list?: { readonly columns?: ReadonlyArray<AdminFieldName<S>> }
   readonly fields?: Partial<Record<AdminFieldName<S>, AdminFieldConfig>>
-  readonly operations?: Partial<Record<ConventionalOperation, string | false>>
-  readonly actions?: Readonly<Record<string, AdminActionConfig>>
+  readonly operations?: Partial<Record<ConventionalOperation, EndpointName<Group> | false>>
+  readonly actions?: Readonly<Record<string, AdminActionConfig<EndpointName<Group>>>>
 }
 
 export interface AdminResourceDef<
@@ -95,7 +106,7 @@ export type AdminCrudResourceConfig<
   Create extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext,
   Update extends Schema.Schema.AnyNoContext = Schema.Schema.AnyNoContext,
   Group extends AdminApiGroup = GeneratedCrudApiGroup<Name, S, Create, Update>
-> = Omit<AdminResourceConfig<S>, "apiGroup" | "name"> &
+> = Omit<AdminResourceConfig<S, AdminApiGroup>, "apiGroup" | "name"> &
   Omit<AdminCrudApiConfig<Name, S, Create, Update>, "create" | "update"> & {
   /**
    * Override the generated create payload. By default effect-admin derives it
@@ -125,7 +136,7 @@ const hasPayloadSchema = (value: unknown): value is EndpointWithPayload =>
 const resolveOperations = (
   resourceName: string,
   apiGroup: AdminApiGroup,
-  overrides: AdminResourceConfig<Schema.Schema.AnyNoContext>["operations"]
+  overrides: Partial<Record<ConventionalOperation, string | false>> | undefined
 ): Readonly<Partial<Record<ConventionalOperation, string>>> => {
   const operations: Partial<Record<ConventionalOperation, string>> = {}
   for (const operation of conventionalOperations) {
@@ -146,7 +157,7 @@ const resolveOperations = (
 const defineActions = (
   resourceName: string,
   apiGroup: AdminApiGroup,
-  actions: AdminResourceConfig<Schema.Schema.AnyNoContext>["actions"] = {}
+  actions: Readonly<Record<string, AdminActionConfig<string>>> = {}
 ): Readonly<Record<string, AdminActionDef>> => {
   const entries: Array<[string, AdminActionDef]> = []
   for (const [name, action] of Object.entries(actions)) {
@@ -171,7 +182,7 @@ export const deriveAdminCreateSchema = <S extends Schema.Schema.AnyNoContext>(
   model: S
 ): Schema.Schema.AnyNoContext => {
   const omittedFields = introspect(model.ast)
-    .filter((field) => field.auto || field.readOnly || field.hidden || field.sensitive)
+    .filter((field) => field.auto || field.readOnly || field.hidden)
     .map((field) => field.name)
 
   if (omittedFields.length === 0) return model
@@ -268,7 +279,7 @@ export const defineCrudResource = <
     model,
     name,
     apiGroup: finalApiGroup
-  })
+  } as unknown as AdminResourceConfig<S, Group>)
 }
 
 export const validateAdminResources = (
@@ -316,9 +327,19 @@ export const makeAdminApi = <
   identifier: Id,
   resources: Resources,
   options?: { readonly prefix?: `/${string}` }
-): HttpApi.HttpApi<Id, Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any, any, never> =>
+): HttpApi.HttpApi<
+  Id,
+  Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any,
+  HttpApiGroup.HttpApiGroup.Error<Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any>,
+  never
+> =>
   makeHttpAdminApi(
     identifier,
     resources.map((resource) => resource.apiGroup as unknown as HttpApiGroup.HttpApiGroup.Any),
     options
-  ) as unknown as HttpApi.HttpApi<Id, Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any, any, never>
+  ) as unknown as HttpApi.HttpApi<
+    Id,
+    Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any,
+    HttpApiGroup.HttpApiGroup.Error<Resources[number]["apiGroup"] & HttpApiGroup.HttpApiGroup.Any>,
+    never
+  >

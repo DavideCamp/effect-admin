@@ -3,19 +3,19 @@ import type { AdminResourceDef, FieldMeta } from "@effect-admin/core"
 import * as Dialog from "@radix-ui/react-dialog"
 import { useEffect, useMemo, useState } from "react"
 import type { FormEvent } from "react"
-import { runEndpoint, type AdminClient, type AdminEndpoint, type AdminListResult, type AdminRecord } from "./client.js"
+import { runEndpoint, type AdminClient, type AdminListResult, type AdminRecord } from "./client.js"
 import type { EffectAdminComponents, TextInputProps } from "./components.js"
 import {
   can,
-  coerceId,
   endpoint,
   ErrorState,
   failureOf,
   fieldByName,
-  initialRecord,
   Loading,
   type Failure
 } from "./internal.js"
+import { listFilterFields, listFiltersFromQuery } from "./list.js"
+import { useAction, useRecord } from "./record-hooks.js"
 import { createPath, editPath, navigate, recordPath, resourcePath } from "./router.js"
 
 const useDebounced = (value: string, delayMs: number) => {
@@ -76,18 +76,8 @@ export const ListScreen = ({
   const search = query.get("search") ?? ""
   const orderBy = query.get("orderBy") ?? undefined
   const orderDir = query.get("orderDir") === "desc" ? "desc" : "asc"
-  const filterFields = resource.fields.filter((field) =>
-    !field.hidden && !resource.fieldConfig[field.name]?.hidden && ["text", "select", "checkbox"].includes(field.kind)
-  )
-  const filters = filterFields.flatMap((field) => {
-    const value = query.get(`f_${field.name}`)
-    if (value === null || value === "") return []
-    return [{
-      field: field.name,
-      operator: field.kind === "text" ? "contains" as const : "eq" as const,
-      value: field.kind === "checkbox" ? value === "true" : value
-    }]
-  })
+  const filterFields = listFilterFields(resource)
+  const filters = listFiltersFromQuery(filterFields, query)
   const [result, setResult] = useState<AdminListResult>()
   const [failure, setFailure] = useState<Failure>()
   const [revision, setRevision] = useState(0)
@@ -100,6 +90,7 @@ export const ListScreen = ({
     }
     let active = true
     setFailure(undefined)
+    setResult(undefined)
     runEndpoint(method({
       urlParams: {
         page,
@@ -307,6 +298,28 @@ const RelationInput = ({
   )
 }
 
+const padDatePart = (value: number) => String(value).padStart(2, "0")
+
+const toDateTimeLocalValue = (value: unknown): string => {
+  const date = value instanceof Date
+    ? value
+    : typeof value === "string"
+      ? new Date(value)
+      : undefined
+  if (!date || Number.isNaN(date.getTime())) return ""
+  return [
+    date.getFullYear(),
+    "-",
+    padDatePart(date.getMonth() + 1),
+    "-",
+    padDatePart(date.getDate()),
+    "T",
+    padDatePart(date.getHours()),
+    ":",
+    padDatePart(date.getMinutes())
+  ].join("")
+}
+
 const FieldInput = ({
   client,
   resources,
@@ -352,7 +365,7 @@ const FieldInput = ({
     {error?.map((message) => <small key={message}>{message}</small>)}</label>
   )
   if (widget === "date") {
-    const shown = value instanceof Date ? value.toISOString().slice(0, 16) : typeof value === "string" ? value.slice(0, 16) : ""
+    const shown = toDateTimeLocalValue(value)
     return <label className="ea-field"><span>{field.title}</span><input type="datetime-local" value={shown} disabled={disabled} required={required} aria-invalid={error !== undefined}
       onChange={(e) => onChange(e.target.value ? new Date(e.target.value) : field.nullable ? null : "")} />
       {error?.map((message) => <small key={message}>{message}</small>)}</label>
@@ -379,100 +392,40 @@ export const RecordScreen = ({
   capabilities?: AdminCapabilities | undefined
   TextInput: EffectAdminComponents["TextInput"]
 }) => {
-  const [record, setRecord] = useState<AdminRecord>(
-    mode === "create" ? initialRecord(resource) : {}
-  )
-  const [loading, setLoading] = useState(mode !== "create")
-  const [failure, setFailure] = useState<Failure>()
-  const [saving, setSaving] = useState(false)
-  const [runningAction, setRunningAction] = useState<string>()
-  const [activeAction, setActiveAction] = useState<string>()
-  const [actionValues, setActionValues] = useState<AdminRecord>({})
-  const [actionFailure, setActionFailure] = useState<Failure>()
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  useEffect(() => {
-    if (mode === "create" || id === undefined) return
-    const method = endpoint<AdminRecord>(client, resource, "get")
-    if (!method) { setFailure({ message: "This resource has no get endpoint." }); setLoading(false); return }
-    let active = true
-    setLoading(true)
-    runEndpoint(method({ path: { id: coerceId(resource, id) } })).then(
-      (value) => { if (active) { setRecord(value); setLoading(false) } },
-      (error) => { if (active) { setFailure(failureOf(error)); setLoading(false) } }
-    )
-    return () => { active = false }
-  }, [client, resource, id, mode])
-
   const editableFields = resource.fields.filter((field) =>
     !field.hidden && !resource.fieldConfig[field.name]?.hidden && !field.auto && !field.readOnly && !resource.fieldConfig[field.name]?.readOnly && field.kind !== "unsupported" && field.name !== resource.primaryKey
   )
   const visibleFields = resource.fields.filter((field) =>
     !field.hidden && !resource.fieldConfig[field.name]?.hidden
   )
+  const {
+    record,
+    setRecord,
+    updateField,
+    loading,
+    failure,
+    setFailure,
+    saving,
+    remove,
+    save
+  } = useRecord({ client, resource, basePath, id, mode, editableFields })
+  const {
+    runningAction,
+    activeAction,
+    actionValues,
+    setActionValues,
+    actionFailure,
+    selectedAction,
+    openAction,
+    closeAction,
+    runAction
+  } = useAction({ client, resource, id, setRecord, setFailure })
+
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    const operation = mode === "create" ? "create" : "update"
-    const method = endpoint<AdminRecord>(client, resource, operation)
-    if (!method) return
-    const payload: AdminRecord = Object.fromEntries(editableFields.flatMap((field) => {
-      const value = record[field.name]
-      if (value === "" && field.optional) return []
-      return [[field.name, value]]
-    }))
-    setSaving(true)
-    setFailure(undefined)
-    const request = mode === "create"
-      ? { payload }
-      : { path: { id: coerceId(resource, id!) }, payload }
-    runEndpoint(method(request)).then(
-      (saved) => {
-        const savedId = saved?.[resource.primaryKey] ?? id
-        navigate(resource.operations.get && savedId !== undefined && savedId !== null
-          ? recordPath(basePath, resource.name, String(savedId))
-          : resourcePath(basePath, resource.name))
-      },
-      (error) => { setFailure(failureOf(error)); setSaving(false) }
-    )
+    save()
   }
-  const remove = () => {
-    if (id === undefined) return
-    const method = endpoint<void>(client, resource, "delete")
-    if (!method) return
-    setSaving(true)
-    runEndpoint(method({ path: { id: coerceId(resource, id) } })).then(
-      () => navigate(resourcePath(basePath, resource.name)),
-      (error) => { setFailure(failureOf(error)); setSaving(false); setDeleteOpen(false) }
-    )
-  }
-  const runAction = (name: string, payload?: AdminRecord) => {
-    if (id === undefined) return
-    const action = resource.actions[name]
-    const method = action
-      ? client[resource.groupName]?.[action.endpoint] as AdminEndpoint | undefined
-      : undefined
-    if (!action || !method) return
-    setRunningAction(name)
-    setFailure(undefined)
-    setActionFailure(undefined)
-    runEndpoint(method({
-      path: { id: coerceId(resource, id) },
-      ...(action.fields.length > 0 ? { payload: payload ?? {} } : {})
-    })).then(
-      (value) => {
-        if (value && typeof value === "object") setRecord(value as AdminRecord)
-        setRunningAction(undefined)
-        setActiveAction(undefined)
-        setActionValues({})
-      },
-      (error) => {
-        const actionError = failureOf(error)
-        setActionFailure(actionError)
-        setRunningAction(undefined)
-      }
-    )
-  }
-  const selectedAction = activeAction ? resource.actions[activeAction] : undefined
 
   if (loading) return <Loading />
   if (failure && mode === "detail" && Object.keys(record).length === 0) return <ErrorState failure={failure} />
@@ -490,11 +443,7 @@ export const RecordScreen = ({
                 disabled={runningAction !== undefined}
                 onClick={() => {
                   if (action.fields.length === 0 && !action.confirm) runAction(name)
-                  else {
-                    setActionValues(initialRecord({ ...resource, fields: action.fields }))
-                    setActionFailure(undefined)
-                    setActiveAction(name)
-                  }
+                  else openAction(name)
                 }}
               >
                 {runningAction === name ? "Working…" : action.label ?? name}
@@ -525,7 +474,7 @@ export const RecordScreen = ({
               value={record[field.name]}
               error={failure?.fields?.[field.name]}
               TextInput={TextInput}
-              onChange={(value) => setRecord((current) => ({ ...current, [field.name]: value }))}
+              onChange={(value) => updateField(field.name, value)}
             />
           ))}
           <div className="ea-form-actions"><button className="ea-button" disabled={saving}>{saving ? "Saving…" : "Save"}</button></div>
@@ -546,7 +495,7 @@ export const RecordScreen = ({
       </Dialog.Root>
       <Dialog.Root
         open={activeAction !== undefined}
-        onOpenChange={(open) => { if (!open && runningAction === undefined) setActiveAction(undefined) }}
+        onOpenChange={closeAction}
       >
         <Dialog.Portal>
           <Dialog.Overlay className="ea-dialog-overlay" />

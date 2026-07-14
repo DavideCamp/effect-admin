@@ -14,7 +14,7 @@ Pin exact versions after the first successful install if you want repeatable
 debugging:
 
 ```bash
-pnpm add @effect-admin/react@0.1.3 @effect-admin/core@0.1.3 @effect-admin/contracts@0.1.2
+pnpm add @effect-admin/react@0.1.4 @effect-admin/core@0.1.4 @effect-admin/contracts@0.1.4
 ```
 
 ## 2. Minimal mount

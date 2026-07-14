@@ -5,7 +5,7 @@ paginated results, capabilities, not-found errors, field validation errors, and
 conventional CRUD `HttpApiGroup` generation.
 
 ```bash
-pnpm add @effect-admin/contracts@0.1.2 effect@^3.21.4 @effect/platform@^0.96.2
+pnpm add @effect-admin/contracts@0.1.4 effect@^3.21.4 @effect/platform@^0.96.2
 ```
 
 The package exists so server and frontend packages in an Effect monorepo can

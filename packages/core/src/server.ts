@@ -37,39 +37,88 @@ export interface AdminCrudRepository<
   Model,
   Create = Partial<Model>,
   Update = Partial<Model>,
-  Id = string | number
+  Id = string | number,
+  Error = never
 > {
   readonly list: (
     params: AdminListParams
-  ) => Effect.Effect<AdminListResultValue<Model>, unknown, never>
-  readonly get: (id: Id) => Effect.Effect<Model, unknown, never>
-  readonly create: (payload: Create) => Effect.Effect<Model, unknown, never>
-  readonly update: (id: Id, payload: Update) => Effect.Effect<Model, unknown, never>
-  readonly delete: (id: Id) => Effect.Effect<void, unknown, never>
+  ) => Effect.Effect<AdminListResultValue<Model>, Error, never>
+  readonly get: (id: Id) => Effect.Effect<Model, Error, never>
+  readonly create: (payload: Create) => Effect.Effect<Model, Error, never>
+  readonly update: (id: Id, payload: Update) => Effect.Effect<Model, Error, never>
+  readonly delete: (id: Id) => Effect.Effect<void, Error, never>
 }
 
 export interface AdminCrudHandlerMap<
   Model,
   Create = Partial<Model>,
   Update = Partial<Model>,
-  Id = string | number
+  Id = string | number,
+  Error = never
 > {
   readonly list: (
     request: unknown
-  ) => Effect.Effect<AdminListResultValue<Model>, unknown, never>
+  ) => Effect.Effect<AdminListResultValue<Model>, Error, never>
   readonly get: (
     request: unknown
-  ) => Effect.Effect<Model, unknown, never>
+  ) => Effect.Effect<Model, Error, never>
   readonly create: (
     request: unknown
-  ) => Effect.Effect<Model, unknown, never>
+  ) => Effect.Effect<Model, Error, never>
   readonly update: (
     request: unknown
-  ) => Effect.Effect<Model, unknown, never>
+  ) => Effect.Effect<Model, Error, never>
   readonly delete: (
     request: unknown
-  ) => Effect.Effect<void, unknown, never>
+  ) => Effect.Effect<void, Error, never>
 }
+
+type EffectError<Value> =
+  Value extends Effect.Effect<unknown, infer Error, never> ? Error : never
+
+type EffectSuccess<Value> =
+  Value extends Effect.Effect<infer Success, unknown, never> ? Success : never
+
+type FirstArgument<Value> =
+  Value extends (arg: infer Argument, ...args: ReadonlyArray<unknown>) => unknown
+    ? Argument
+    : never
+
+type SecondArgument<Value> =
+  Value extends (first: unknown, second: infer Argument, ...args: ReadonlyArray<unknown>) => unknown
+    ? Argument
+    : never
+
+type AnyCrudRepository = {
+  readonly list: (params: AdminListParams) => Effect.Effect<AdminListResultValue<any>, any, never>
+  readonly get: (id: any) => Effect.Effect<any, any, never>
+  readonly create: (payload: any) => Effect.Effect<any, any, never>
+  readonly update: (id: any, payload: any) => Effect.Effect<any, any, never>
+  readonly delete: (id: any) => Effect.Effect<void, any, never>
+}
+
+type RepositoryError<Repository> =
+  Repository extends {
+    readonly list: (...args: ReadonlyArray<any>) => infer List
+    readonly get: (...args: ReadonlyArray<any>) => infer Get
+    readonly create: (...args: ReadonlyArray<any>) => infer Create
+    readonly update: (...args: ReadonlyArray<any>) => infer Update
+    readonly delete: (...args: ReadonlyArray<any>) => infer Delete
+  }
+    ? EffectError<List> | EffectError<Get> | EffectError<Create> | EffectError<Update> | EffectError<Delete>
+    : never
+
+type RepositoryModel<Repository extends AnyCrudRepository> =
+  EffectSuccess<ReturnType<Repository["get"]>>
+
+type RepositoryCreate<Repository extends AnyCrudRepository> =
+  FirstArgument<Repository["create"]>
+
+type RepositoryUpdate<Repository extends AnyCrudRepository> =
+  SecondArgument<Repository["update"]>
+
+type RepositoryId<Repository extends AnyCrudRepository> =
+  FirstArgument<Repository["get"]>
 
 /**
  * Convert host-owned persistence functions into conventional admin CRUD
@@ -78,31 +127,34 @@ export interface AdminCrudHandlerMap<
  * authorization, transactions, tenancy, and business rules.
  */
 export const makeCrudHandlers = <
-  Model,
-  Create = Partial<Model>,
-  Update = Partial<Model>,
-  Id = string | number
+  Repository extends AnyCrudRepository
 >(
-  repository: AdminCrudRepository<Model, Create, Update, Id>
-): AdminCrudHandlerMap<Model, Create, Update, Id> => ({
+  repository: Repository
+): AdminCrudHandlerMap<
+  RepositoryModel<Repository>,
+  RepositoryCreate<Repository>,
+  RepositoryUpdate<Repository>,
+  RepositoryId<Repository>,
+  RepositoryError<Repository>
+> => ({
   list: (request) => {
     const { urlParams } = request as AdminListRequest
     return repository.list(urlParams)
   },
   get: (request) => {
-    const { path } = request as AdminGetRequest<Id>
+    const { path } = request as AdminGetRequest<RepositoryId<Repository>>
     return repository.get(path.id)
   },
   create: (request) => {
-    const { payload } = request as AdminCreateRequest<Create>
+    const { payload } = request as AdminCreateRequest<RepositoryCreate<Repository>>
     return repository.create(payload)
   },
   update: (request) => {
-    const { path, payload } = request as AdminUpdateRequest<Update, Id>
+    const { path, payload } = request as AdminUpdateRequest<RepositoryUpdate<Repository>, RepositoryId<Repository>>
     return repository.update(path.id, payload)
   },
   delete: (request) => {
-    const { path } = request as AdminDeleteRequest<Id>
+    const { path } = request as AdminDeleteRequest<RepositoryId<Repository>>
     return repository.delete(path.id)
   }
 })
